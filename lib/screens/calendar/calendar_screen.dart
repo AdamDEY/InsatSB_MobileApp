@@ -27,8 +27,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
-      body: SafeArea(
-        child: Column(
+      body: Column(
           children: [
             _buildHeader(),
             Expanded(
@@ -85,8 +84,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
   }
 
   Widget _buildHeader() {

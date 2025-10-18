@@ -26,15 +26,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            Expanded(
-              child: _buildFavoritesList(),
-            ),
-          ],
-        ),
+      body: Column(
+        children: [
+          _buildHeader(),
+          Expanded(
+            child: _buildFavoritesList(),
+          ),
+        ],
       ),
     );
   }

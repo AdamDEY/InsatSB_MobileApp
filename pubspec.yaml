@@ -46,6 +46,10 @@ dependencies:
   
   # QR Code generation
   qr_flutter: ^4.1.0
+  
+  # URL launcher for external links
+  url_launcher: ^6.2.2
+  firebase_core: ^4.2.0
 
 dev_dependencies:
   flutter_test:

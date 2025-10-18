@@ -11,6 +11,7 @@ class Event {
   final String imageUrl;
   final bool isFeatured;
   final bool isFavorite;
+  final bool isRegistered;
 
   Event({
     required this.id,
@@ -25,6 +26,7 @@ class Event {
     required this.imageUrl,
     this.isFeatured = false,
     this.isFavorite = false,
+    this.isRegistered = false,
   });
 
   factory Event.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class Event {
       imageUrl: json['imageUrl'] ?? '',
       isFeatured: json['isFeatured'] ?? false,
       isFavorite: json['isFavorite'] ?? false,
+      isRegistered: json['isRegistered'] ?? false,
     );
   }
 
@@ -58,6 +61,7 @@ class Event {
       'imageUrl': imageUrl,
       'isFeatured': isFeatured,
       'isFavorite': isFavorite,
+      'isRegistered': isRegistered,
     };
   }
 
@@ -74,6 +78,7 @@ class Event {
     String? imageUrl,
     bool? isFeatured,
     bool? isFavorite,
+    bool? isRegistered,
   }) {
     return Event(
       id: id ?? this.id,
@@ -88,6 +93,7 @@ class Event {
       imageUrl: imageUrl ?? this.imageUrl,
       isFeatured: isFeatured ?? this.isFeatured,
       isFavorite: isFavorite ?? this.isFavorite,
+      isRegistered: isRegistered ?? this.isRegistered,
     );
   }
 }

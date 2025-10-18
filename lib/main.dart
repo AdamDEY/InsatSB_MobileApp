@@ -8,6 +8,10 @@ import 'screens/favorites/favorites_view_model.dart';
 import 'screens/calendar/calendar_screen.dart';
 import 'screens/calendar/calendar_view_model.dart';
 import 'screens/event_details/event_details_view_model.dart';
+import 'screens/profile/profile_screen.dart';
+import 'screens/profile/profile_view_model.dart';
+import 'screens/login/login_screen.dart';
+import 'screens/login/login_view_model.dart';
 import 'widgets/custom_nav_bar.dart';
 
 void main() {
@@ -43,6 +47,14 @@ class IEEEApp extends StatelessWidget {
           create: (context) => EventDetailsViewModel(
             context.read<EventRepository>(),
           ),
+        ),
+        ChangeNotifierProvider<ProfileViewModel>(
+          create: (context) => ProfileViewModel(
+            context.read<EventRepository>(),
+          ),
+        ),
+        ChangeNotifierProvider<LoginViewModel>(
+          create: (context) => LoginViewModel(),
         ),
       ],
       child: MaterialApp(
@@ -98,7 +110,10 @@ class IEEEApp extends StatelessWidget {
           ),
         ),
         themeMode: ThemeMode.system,
-        home: const MainApp(),
+        home: const LoginScreen(),
+        routes: {
+          '/main': (context) => const MainApp(),
+        },
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -118,7 +133,10 @@ class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _getCurrentScreen(),
+      extendBodyBehindAppBar: false,
+      body: SafeArea(
+        child: _getCurrentScreen(),
+      ),
       bottomNavigationBar: CustomNavBar(
         currentItem: _currentItem,
         onItemSelected: (item) {
@@ -139,47 +157,8 @@ class _MainAppState extends State<MainApp> {
       case NavBarItem.calendar:
         return const CalendarScreen();
       case NavBarItem.profile:
-        return _buildPlaceholderScreen('Profile', 'User profile will be shown here');
+        return const ProfileScreen();
     }
   }
 
-  Widget _buildPlaceholderScreen(String title, String subtitle) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.construction,
-                size: 80,
-                color: isDark ? Colors.grey[600] : Colors.grey[400],
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isDark ? Colors.grey[400] : Colors.grey[600],
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

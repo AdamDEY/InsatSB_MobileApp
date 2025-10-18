@@ -65,6 +65,7 @@ class EventRepositoryImpl implements EventRepository {
         imageUrl: 'https://via.placeholder.com/400x200/4A90E2/FFFFFF?text=Machine+Learning',
         isFeatured: true,
         isFavorite: false,
+        isRegistered: true,
       ),
       Event(
         id: '2',
@@ -79,6 +80,7 @@ class EventRepositoryImpl implements EventRepository {
         imageUrl: 'https://via.placeholder.com/400x200/7ED321/FFFFFF?text=IOT+Robotics',
         isFeatured: false,
         isFavorite: false,
+        isRegistered: true,
       ),
       Event(
         id: '3',
@@ -93,6 +95,7 @@ class EventRepositoryImpl implements EventRepository {
         imageUrl: 'https://via.placeholder.com/400x200/50E3C2/FFFFFF?text=ML+Workshop',
         isFeatured: false,
         isFavorite: false,
+        isRegistered: false,
       ),
     ];
 

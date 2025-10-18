@@ -26,16 +26,14 @@ class _HomeScreenState extends State<HomeScreen> {
     
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildHeader(),
-            _buildCategoryFilters(),
-            Expanded(
-              child: _buildEventsList(),
-            ),
-          ],
-        ),
+      body: Column(
+        children: [
+          _buildHeader(),
+          _buildCategoryFilters(),
+          Expanded(
+            child: _buildEventsList(),
+          ),
+        ],
       ),
     );
   }
