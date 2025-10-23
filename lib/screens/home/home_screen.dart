@@ -106,11 +106,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isSelected ? const Color(0xFF8B5CF6) : Colors.transparent,
+                      color: isSelected ? _getChapterColor(category) : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
                         color: isSelected 
-                          ? const Color(0xFF8B5CF6) 
+                          ? _getChapterColor(category)
                           : (isDark ? Colors.grey[600]! : Colors.grey[300]!),
                       ),
                     ),
@@ -175,12 +175,30 @@ class _HomeScreenState extends State<HomeScreen> {
           final isDark = Theme.of(context).brightness == Brightness.dark;
           
           return Center(
-            child: Text(
-              'No events found',
-              style: TextStyle(
-                fontSize: 16,
-                color: isDark ? Colors.grey[400] : Colors.grey[600],
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'No events found',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Selected: ${viewModel.selectedCategory}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.grey[500] : Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => viewModel.loadEvents(),
+                  child: const Text('Reload Events'),
+                ),
+              ],
             ),
           );
         }
@@ -205,5 +223,26 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       },
     );
+  }
+
+  Color _getChapterColor(String chapter) {
+    switch (chapter) {
+      case 'CS':
+        return const Color(0xFF8B5CF6); // Purple
+      case 'RAS':
+        return const Color(0xFF3B82F6); // Blue
+      case 'PES/PELS':
+        return const Color(0xFF10B981); // Green
+      case 'IAS':
+        return const Color(0xFFF59E0B); // Orange
+      case 'SIGHT':
+        return const Color(0xFFEF4444); // Red
+      case 'WIE':
+        return const Color(0xFFEC4899); // Pink
+      case 'All':
+        return const Color(0xFF8B5CF6); // Default purple for "All"
+      default:
+        return const Color(0xFF8B5CF6); // Default purple
+    }
   }
 }

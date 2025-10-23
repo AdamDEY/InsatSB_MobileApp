@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../services/firestore_auth_provider.dart';
 import '../../repositories/event_repository.dart';
 
 class ProfileViewModel extends ChangeNotifier {
   final EventRepository _eventRepository;
+  final AuthProvider _authProvider;
   
-  ProfileViewModel(this._eventRepository);
+  ProfileViewModel(this._eventRepository, this._authProvider);
   
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -12,14 +14,11 @@ class ProfileViewModel extends ChangeNotifier {
   int _registeredEventsCount = 0;
   int get registeredEventsCount => _registeredEventsCount;
   
-  final String _userName = 'Flen Ben Foulen';
-  String get userName => _userName;
-  
-  final String _userEmail = 'flen.benfoulen@ieee.org';
-  String get userEmail => _userEmail;
-  
-  final String _userIEEEId = '97235526';
-  String get userIEEEId => _userIEEEId;
+  String get userName => _authProvider.userFullName ?? 'Unknown User';
+  String get userEmail => _authProvider.userEmail ?? 'No email';
+  String get userIEEEId => _authProvider.userId ?? 'No ID';
+  String get userRole => _authProvider.userRole?.displayName ?? 'Member';
+  bool get isAdmin => _authProvider.userRole?.isAdmin ?? false;
   
   final String _spotifyPlaylistUrl = 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M';
   String get spotifyPlaylistUrl => _spotifyPlaylistUrl;
@@ -50,12 +49,7 @@ class ProfileViewModel extends ChangeNotifier {
     notifyListeners();
     
     try {
-      // In a real app, you would:
-      // 1. Clear user session
-      // 2. Clear stored tokens
-      // 3. Navigate to login screen
-      // For now, we'll just simulate logout
-      await Future.delayed(const Duration(seconds: 1));
+      await _authProvider.signOut();
       
     } catch (e) {
       debugPrint('Error during logout: $e');

@@ -35,7 +35,7 @@ class EventCard extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: event.isFeatured ? _buildFeaturedCard(context) : _buildStandardCard(context),
+          child: _buildFeaturedCard(context),
         ),
       ),
     );
@@ -83,111 +83,6 @@ class EventCard extends StatelessWidget {
     );
   }
 
-  Widget _buildStandardCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Container(
-      height: 100,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF2D2D2D) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? Colors.grey[700]! : Colors.grey[200]!,
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            // Left side - Category tag
-            _buildCategoryTag(),
-            const SizedBox(width: 12),
-            // Center - Event details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    event.title,
-                    style: TextStyle(
-                      color: isDark ? Colors.white : Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${_formatDate(event.date)} • ${_formatTime(event.startTime)} - ${_formatTime(event.endTime)}',
-                    style: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${event.attendees} Attendees • Level: ${event.level}',
-                    style: TextStyle(
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            // Right side - Favorite button
-            _buildFavoriteButton(context),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoryTag() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: const Color(0xFF8B5CF6), // Purple color
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        event.category,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFavoriteButton(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return GestureDetector(
-      onTap: onFavoritePressed,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.grey[800] : Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Icon(
-          event.isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: event.isFavorite ? Colors.red : (isDark ? Colors.grey[400] : Colors.grey[600]),
-          size: 20,
-        ),
-      ),
-    );
-  }
-
   Widget _buildEventDetails(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -212,10 +107,12 @@ class EventCard extends StatelessWidget {
             color: isDark ? Colors.grey[400] : Colors.grey[600],
             fontSize: 12,
           ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 2),
         Text(
-          '${event.attendees} Attendees',
+          '${event.registrations}/${event.attendeesNeeded} Attendees',
           style: TextStyle(
             color: isDark ? Colors.grey[400] : Colors.grey[600],
             fontSize: 12,
@@ -230,6 +127,84 @@ class EventCard extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildCategoryTag() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Chapter tag
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: _getChapterColor(event.chapter),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            event.chapter.displayName,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        // Category tag
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.grey[600],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            event.category,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getChapterColor(Chapter chapter) {
+    switch (chapter) {
+      case Chapter.cs:
+        return const Color(0xFF8B5CF6); // Purple
+      case Chapter.ras:
+        return const Color(0xFF3B82F6); // Blue
+      case Chapter.pesPels:
+        return const Color(0xFF10B981); // Green
+      case Chapter.ias:
+        return const Color(0xFFF59E0B); // Orange
+      case Chapter.sight:
+        return const Color(0xFFEF4444); // Red
+      case Chapter.wie:
+        return const Color(0xFFEC4899); // Pink
+    }
+  }
+
+  Widget _buildFavoriteButton(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GestureDetector(
+      onTap: onFavoritePressed,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.grey[800] : Colors.grey[100],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(
+          event.isFavorite ? Icons.favorite : Icons.favorite_border,
+          color: event.isFavorite ? Colors.red : (isDark ? Colors.grey[400] : Colors.grey[600]),
+          size: 20,
+        ),
+      ),
     );
   }
 

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../services/firestore_auth_provider.dart';
 
 class LoginViewModel extends ChangeNotifier {
+  final AuthProvider _authProvider;
+  
+  LoginViewModel(this._authProvider);
+  
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  
-  bool _isLoading = false;
-  bool get isLoading => _isLoading;
   
   bool _isPasswordVisible = false;
   bool get isPasswordVisible => _isPasswordVisible;
@@ -15,6 +17,8 @@ class LoginViewModel extends ChangeNotifier {
   
   String? _passwordError;
   String? get passwordError => _passwordError;
+  
+  bool get isLoading => _authProvider.isLoading;
   
   @override
   void dispose() {
@@ -71,34 +75,32 @@ class LoginViewModel extends ChangeNotifier {
       return false;
     }
     
-    _isLoading = true;
-    notifyListeners();
-    
     try {
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
+      final success = await _authProvider.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
       
-      // Mock login logic - in a real app, you would call an API
-      if (email == 'ieee@example.com' && password == 'password123') {
-        _isLoading = false;
+      if (!success && _authProvider.errorMessage != null) {
+        // Handle Firebase Auth errors
+        final error = _authProvider.errorMessage!;
+        if (error.contains('email')) {
+          _emailError = error;
+        } else if (error.contains('password')) {
+          _passwordError = error;
+        } else {
+          _emailError = error;
+        }
         notifyListeners();
-        return true;
-      } else {
-        _isLoading = false;
-        notifyListeners();
-        return false;
       }
       
+      return success;
+      
     } catch (e) {
-      _isLoading = false;
+      _emailError = 'An unexpected error occurred. Please try again.';
       notifyListeners();
       return false;
     }
-  }
-  
-  Future<void> loginWithCallback(Function(bool success) onComplete) async {
-    final success = await login();
-    onComplete(success);
   }
   
   void clearForm() {

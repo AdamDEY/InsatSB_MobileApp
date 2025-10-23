@@ -61,9 +61,10 @@ class EventDetailsViewModel extends ChangeNotifier {
   }
 
   // Open LinkedIn profile
-  void openLinkedIn() {
-    // In a real app, this would open the LinkedIn profile
+  void openLinkedIn(String linkedInUrl) {
+    // In a real app, this would open the LinkedIn profile URL
     // For now, we'll just show a placeholder
+    print('Opening LinkedIn profile: $linkedInUrl');
   }
 
   void _setLoading(bool loading) {

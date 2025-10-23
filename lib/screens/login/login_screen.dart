@@ -254,20 +254,24 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
   
-  void _handleLogin(BuildContext context, LoginViewModel viewModel) {
-    final navigator = Navigator.of(context);
-    
-    viewModel.loginWithCallback((success) {
-      if (success) {
-        // Navigate to main app
-        navigator.pushReplacementNamed('/main');
-      } else {
-        // Show error dialog
+  void _handleLogin(BuildContext context, LoginViewModel viewModel) async {
+    try {
+      final success = await viewModel.login();
+      
+      // Check if the widget is still mounted before showing dialog
+      if (!mounted) return;
+      
+      if (!success) {
+        // Show error dialog with more specific error message
+        final errorMessage = viewModel.emailError ?? 
+                           viewModel.passwordError ?? 
+                           'Invalid credentials. Please try again.';
+        
         showDialog(
-          context: navigator.context,
+          context: context,
           builder: (context) => AlertDialog(
             title: const Text('Login Failed'),
-            content: const Text('Invalid credentials. Please try again.'),
+            content: Text(errorMessage),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
@@ -277,6 +281,24 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       }
-    });
+      // If successful, the AuthProvider will automatically navigate to MainApp
+    } catch (e) {
+      // Handle any unexpected errors
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Login Error'),
+          content: Text('An unexpected error occurred: ${e.toString()}'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 }

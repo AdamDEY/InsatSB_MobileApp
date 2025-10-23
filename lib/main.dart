@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'repositories/event_repository.dart';
+import 'repositories/user_repository.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/home/home_view_model.dart';
 import 'screens/favorites/favorites_screen.dart';
@@ -12,9 +15,14 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/profile/profile_view_model.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/login/login_view_model.dart';
+import 'services/firestore_auth_provider.dart';
 import 'widgets/custom_nav_bar.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const IEEEApp());
 }
 
@@ -25,6 +33,12 @@ class IEEEApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        Provider<UserRepository>(
+          create: (_) => UserRepositoryImpl(),
+        ),
+        ChangeNotifierProvider<AuthProvider>(
+          create: (context) => AuthProvider(context.read<UserRepository>()),
+        ),
         Provider<EventRepository>(
           create: (_) => EventRepositoryImpl(),
         ),
@@ -51,10 +65,13 @@ class IEEEApp extends StatelessWidget {
         ChangeNotifierProvider<ProfileViewModel>(
           create: (context) => ProfileViewModel(
             context.read<EventRepository>(),
+            context.read<AuthProvider>(),
           ),
         ),
         ChangeNotifierProvider<LoginViewModel>(
-          create: (context) => LoginViewModel(),
+          create: (context) => LoginViewModel(
+            context.read<AuthProvider>(),
+          ),
         ),
       ],
       child: MaterialApp(
@@ -110,7 +127,23 @@ class IEEEApp extends StatelessWidget {
           ),
         ),
         themeMode: ThemeMode.system,
-        home: const LoginScreen(),
+        home: Consumer<AuthProvider>(
+          builder: (context, authProvider, child) {
+            if (authProvider.isLoading) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            
+            if (authProvider.isSignedIn) {
+              return const MainApp();
+            } else {
+              return const LoginScreen();
+            }
+          },
+        ),
         routes: {
           '/main': (context) => const MainApp(),
         },

@@ -133,15 +133,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 const SizedBox(height: 24),
                 
                 // About section
-                _buildAboutSection(isDark),
+                _buildAboutSection(event, isDark),
                 const SizedBox(height: 24),
                 
                 // Prerequisites section
-                _buildPrerequisitesSection(isDark),
+                _buildPrerequisitesSection(event, isDark),
                 const SizedBox(height: 24),
                 
                 // Speaker section
-                _buildSpeakerSection(isDark),
+                _buildSpeakerSection(event, isDark),
                 const SizedBox(height: 100), // Extra space for fixed button
               ],
             ),
@@ -166,12 +166,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       ),
       child: Column(
         children: [
-          _buildDetailRow(Icons.person, 'Speaker', 'Dr Fles Bon Foullen', isDark),
+          _buildDetailRow(Icons.person, 'Speaker', event.speakerFullName, isDark),
           const SizedBox(height: 12),
           _buildDetailRow(Icons.calendar_today, 'Date & Time', 
               '${_formatDate(event.date)} • ${_formatTime(event.startTime)} - ${_formatTime(event.endTime)}', isDark),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.group, 'Attendees', '${event.attendees} Attendees', isDark),
+          _buildDetailRow(Icons.group, 'Attendees', '${event.registrations}/${event.attendeesNeeded} Attendees', isDark),
           const SizedBox(height: 12),
           _buildDetailRow(Icons.description, 'Level', event.level, isDark),
         ],
@@ -201,12 +201,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildAboutSection(bool isDark) {
+  Widget _buildAboutSection(event, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'About the workshop',
+          'About the ${event.category.toLowerCase()}',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -215,27 +215,38 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+          event.description,
           style: TextStyle(
             fontSize: 14,
             color: isDark ? Colors.grey[300] : Colors.grey[700],
             height: 1.5,
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
-          style: TextStyle(
-            fontSize: 14,
-            color: isDark ? Colors.grey[300] : Colors.grey[700],
-            height: 1.5,
+        if (event.aboutSpeaker.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          Text(
+            'About the Speaker',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black,
+            ),
           ),
-        ),
+          const SizedBox(height: 8),
+          Text(
+            event.aboutSpeaker,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey[300] : Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildPrerequisitesSection(bool isDark) {
+  Widget _buildPrerequisitesSection(event, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -248,44 +259,30 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        _buildPrerequisiteItem('Basic Python programming', isDark),
-        _buildPrerequisiteItem('Laptop with Python Installed on it', isDark),
-        _buildPrerequisiteItem('Basic Knowledge of Linear Algebra', isDark),
+        if (event.prerequisites.isNotEmpty) ...[
+          Text(
+            event.prerequisites,
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey[300] : Colors.grey[700],
+              height: 1.5,
+            ),
+          ),
+        ] else ...[
+          Text(
+            'No specific prerequisites required.',
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ],
     );
   }
 
-  Widget _buildPrerequisiteItem(String text, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 6,
-            height: 6,
-            margin: const EdgeInsets.only(top: 6, right: 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFF8B5CF6),
-              shape: BoxShape.circle,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-                height: 1.5,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSpeakerSection(bool isDark) {
+  Widget _buildSpeakerSection(event, bool isDark) {
     return Consumer<EventDetailsViewModel>(
       builder: (context, viewModel, child) {
         return Column(
@@ -301,27 +298,31 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.',
+              event.speakerFullName,
               style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-                height: 1.5,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
             const SizedBox(height: 8),
-            Text(
-              'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.grey[300] : Colors.grey[700],
-                height: 1.5,
+            if (event.aboutSpeaker.isNotEmpty) ...[
+              Text(
+                event.aboutSpeaker,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.grey[300] : Colors.grey[700],
+                  height: 1.5,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            LinkedInButton(
-              onPressed: viewModel.openLinkedIn,
-              text: 'LinkedIn',
-            ),
+              const SizedBox(height: 16),
+            ],
+            if (event.speakerLinkedIn.isNotEmpty) ...[
+              LinkedInButton(
+                onPressed: () => viewModel.openLinkedIn(event.speakerLinkedIn),
+                text: 'LinkedIn',
+              ),
+            ],
           ],
         );
       },
