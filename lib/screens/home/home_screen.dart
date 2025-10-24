@@ -228,17 +228,17 @@ class _HomeScreenState extends State<HomeScreen> {
   Color _getChapterColor(String chapter) {
     switch (chapter) {
       case 'CS':
-        return const Color(0xFF8B5CF6); // Purple
+        return const Color(0xFFFF8C00); // Orange
       case 'RAS':
-        return const Color(0xFF3B82F6); // Blue
-      case 'PES/PELS':
-        return const Color(0xFF10B981); // Green
-      case 'IAS':
-        return const Color(0xFFF59E0B); // Orange
-      case 'SIGHT':
-        return const Color(0xFFEF4444); // Red
-      case 'WIE':
         return const Color(0xFFEC4899); // Pink
+      case 'PES/PELS':
+        return const Color(0xFFEF4444); // Red
+      case 'IAS':
+        return const Color(0xFF10B981); // Green
+      case 'SIGHT':
+        return const Color(0xFFFCD34D); // Yellow
+      case 'WIE':
+        return const Color(0xFF8B5CF6); // Purple
       case 'All':
         return const Color(0xFF8B5CF6); // Default purple for "All"
       default:

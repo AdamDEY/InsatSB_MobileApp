@@ -575,15 +575,35 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       onPressed: () async {
                         final navigator = Navigator.of(context);
                         navigator.pop();
-                        await viewModel.registerForEvent();
+                        
+                        final success = await viewModel.registerForEvent();
                         _commentController.clear();
                         
-                        // Navigate to ticket screen
-                        navigator.push(
-                          MaterialPageRoute(
-                            builder: (context) => EventTicketScreen(eventId: widget.eventId),
-                          ),
-                        );
+                        if (success) {
+                          // Navigate to ticket screen
+                          navigator.push(
+                            MaterialPageRoute(
+                              builder: (context) => EventTicketScreen(eventId: widget.eventId),
+                            ),
+                          );
+                        } else {
+                          // Show error message
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Registration Failed'),
+                                content: Text(viewModel.error ?? 'Failed to register for event. Please try again.'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF8B5CF6),

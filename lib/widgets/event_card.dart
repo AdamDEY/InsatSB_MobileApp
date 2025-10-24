@@ -174,17 +174,17 @@ class EventCard extends StatelessWidget {
   Color _getChapterColor(Chapter chapter) {
     switch (chapter) {
       case Chapter.cs:
-        return const Color(0xFF8B5CF6); // Purple
+        return const Color(0xFFFF8C00); // Orange
       case Chapter.ras:
-        return const Color(0xFF3B82F6); // Blue
-      case Chapter.pesPels:
-        return const Color(0xFF10B981); // Green
-      case Chapter.ias:
-        return const Color(0xFFF59E0B); // Orange
-      case Chapter.sight:
-        return const Color(0xFFEF4444); // Red
-      case Chapter.wie:
         return const Color(0xFFEC4899); // Pink
+      case Chapter.pesPels:
+        return const Color(0xFFEF4444); // Red
+      case Chapter.ias:
+        return const Color(0xFF10B981); // Green
+      case Chapter.sight:
+        return const Color(0xFFFCD34D); // Yellow
+      case Chapter.wie:
+        return const Color(0xFF8B5CF6); // Purple
     }
   }
 

@@ -7,6 +7,8 @@ abstract class EventRepository {
   Future<List<Event>> getEventsByChapter(String chapter);
   Future<Event> getEventById(String id);
   Future<void> toggleFavorite(String eventId);
+  Future<bool> registerForEvent(String eventId);
+  Future<bool> unregisterFromEvent(String eventId);
 }
 
 class EventRepositoryImpl implements EventRepository {
@@ -141,6 +143,77 @@ class EventRepositoryImpl implements EventRepository {
       _favoriteEventIds.remove(eventId);
     } else {
       _favoriteEventIds.add(eventId);
+    }
+  }
+
+  @override
+  Future<bool> registerForEvent(String eventId) async {
+    try {
+      print('Attempting to register for event: $eventId');
+      
+      // Use Firestore transaction to safely increment registrations
+      await _firestore.runTransaction((transaction) async {
+        final eventRef = _firestore.collection('events').doc(eventId);
+        final eventDoc = await transaction.get(eventRef);
+        
+        if (!eventDoc.exists) {
+          throw Exception('Event not found');
+        }
+        
+        final currentRegistrations = eventDoc.data()?['registrations'] ?? 0;
+        final attendeesNeeded = eventDoc.data()?['attendeesNeeded'] ?? 0;
+        
+        // Check if event is full
+        if (currentRegistrations >= attendeesNeeded) {
+          throw Exception('Event is full');
+        }
+        
+        // Increment registrations
+        transaction.update(eventRef, {
+          'registrations': currentRegistrations + 1,
+        });
+      });
+      
+      print('Successfully registered for event: $eventId');
+      return true;
+    } catch (e) {
+      print('Error registering for event: $e');
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> unregisterFromEvent(String eventId) async {
+    try {
+      print('Attempting to unregister from event: $eventId');
+      
+      // Use Firestore transaction to safely decrement registrations
+      await _firestore.runTransaction((transaction) async {
+        final eventRef = _firestore.collection('events').doc(eventId);
+        final eventDoc = await transaction.get(eventRef);
+        
+        if (!eventDoc.exists) {
+          throw Exception('Event not found');
+        }
+        
+        final currentRegistrations = eventDoc.data()?['registrations'] ?? 0;
+        
+        // Check if there are registrations to decrement
+        if (currentRegistrations <= 0) {
+          throw Exception('No registrations to remove');
+        }
+        
+        // Decrement registrations
+        transaction.update(eventRef, {
+          'registrations': currentRegistrations - 1,
+        });
+      });
+      
+      print('Successfully unregistered from event: $eventId');
+      return true;
+    } catch (e) {
+      print('Error unregistering from event: $e');
+      return false;
     }
   }
 

@@ -46,17 +46,78 @@ class EventDetailsViewModel extends ChangeNotifier {
   }
 
   // Register for event
-  Future<void> registerForEvent() async {
-    if (_event == null) return;
+  Future<bool> registerForEvent() async {
+    if (_event == null) return false;
+    
+    _setLoading(true);
+    _error = null;
     
     try {
-      // Simulate registration process
-      await Future.delayed(const Duration(seconds: 1));
-      _isRegistered = true;
-      notifyListeners();
+      print('EventDetailsViewModel: Registering for event: ${_event!.id}');
+      
+      // Register for the event in Firestore
+      final success = await _eventRepository.registerForEvent(_event!.id);
+      
+      if (success) {
+        // Update local state
+        _isRegistered = true;
+        
+        // Reload the event to get updated registration count
+        await loadEvent(_event!.id);
+        
+        print('EventDetailsViewModel: Successfully registered for event');
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to register for event. Please try again.';
+        notifyListeners();
+        return false;
+      }
     } catch (e) {
+      print('EventDetailsViewModel: Error registering for event: $e');
       _error = e.toString();
       notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // Unregister from event
+  Future<bool> unregisterFromEvent() async {
+    if (_event == null) return false;
+    
+    _setLoading(true);
+    _error = null;
+    
+    try {
+      print('EventDetailsViewModel: Unregistering from event: ${_event!.id}');
+      
+      // Unregister from the event in Firestore
+      final success = await _eventRepository.unregisterFromEvent(_event!.id);
+      
+      if (success) {
+        // Update local state
+        _isRegistered = false;
+        
+        // Reload the event to get updated registration count
+        await loadEvent(_event!.id);
+        
+        print('EventDetailsViewModel: Successfully unregistered from event');
+        notifyListeners();
+        return true;
+      } else {
+        _error = 'Failed to unregister from event. Please try again.';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      print('EventDetailsViewModel: Error unregistering from event: $e');
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
