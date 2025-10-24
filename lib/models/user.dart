@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 enum UserRole {
   member('member'),
   admin('admin');
@@ -57,12 +59,33 @@ class AppUser {
       password: json['password'] ?? '',
       fullName: json['fullName'] ?? '',
       role: UserRole.fromString(json['role'] ?? 'member'),
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: _parseTimestamp(json['createdAt']),
       lastLoginAt: json['lastLoginAt'] != null 
-          ? DateTime.parse(json['lastLoginAt'])
+          ? _parseTimestamp(json['lastLoginAt'])
           : null,
       isActive: json['isActive'] ?? true,
     );
+  }
+
+  static DateTime _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) {
+      return DateTime.now();
+    }
+    
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    }
+    
+    if (timestamp is String) {
+      return DateTime.parse(timestamp);
+    }
+    
+    if (timestamp is DateTime) {
+      return timestamp;
+    }
+    
+    // Fallback to current time
+    return DateTime.now();
   }
 
   Map<String, dynamic> toJson() {
@@ -72,8 +95,8 @@ class AppUser {
       'password': password,
       'fullName': fullName,
       'role': role.value,
-      'createdAt': createdAt.toIso8601String(),
-      'lastLoginAt': lastLoginAt?.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'lastLoginAt': lastLoginAt != null ? Timestamp.fromDate(lastLoginAt!) : null,
       'isActive': isActive,
     };
   }

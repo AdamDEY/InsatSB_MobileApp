@@ -112,7 +112,7 @@ class UserRepositoryImpl implements UserRepository {
           .collection('users')
           .doc(userId)
           .update({
-        'lastLoginAt': DateTime.now().toIso8601String(),
+        'lastLoginAt': Timestamp.fromDate(DateTime.now()),
       });
       
       print('Successfully updated last login for user: $userId');
