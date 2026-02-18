@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 
-enum NavBarItem { home, favorites, calendar, profile }
+enum NavBarItem { home, favorites, calendar, profile, admin }
 
 class CustomNavBar extends StatelessWidget {
   final NavBarItem currentItem;
   final Function(NavBarItem) onItemSelected;
+  final bool isAdmin;
 
   const CustomNavBar({
     super.key,
     required this.currentItem,
     required this.onItemSelected,
+    this.isAdmin = false,
   });
 
   @override
@@ -69,6 +71,14 @@ class CustomNavBar extends StatelessWidget {
               item: NavBarItem.calendar,
               isSelected: currentItem == NavBarItem.calendar,
             ),
+            if (isAdmin)
+              _buildNavItem(
+                context,
+                icon: Icons.admin_panel_settings_outlined,
+                label: 'Admin',
+                item: NavBarItem.admin,
+                isSelected: currentItem == NavBarItem.admin,
+              ),
             _buildNavItem(
               context,
               icon: Icons.person_outline,

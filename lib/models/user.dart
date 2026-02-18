@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum UserRole {
   member('member'),
   admin('admin');
@@ -34,7 +32,7 @@ enum UserRole {
 class AppUser {
   final String id;
   final String email;
-  final String password; // In production, this should be hashed
+  final String password;
   final String fullName;
   final UserRole role;
   final DateTime createdAt;
@@ -53,14 +51,22 @@ class AppUser {
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
+    final isAdmin = json['isAdmin'] == true;
+    final roleValue = json['role'] as String?;
+    final role = isAdmin
+        ? UserRole.admin
+        : (roleValue != null
+              ? UserRole.fromString(roleValue)
+              : UserRole.member);
+
     return AppUser(
-      id: json['id'] ?? '',
+      id: json['id']?.toString() ?? '',
       email: json['email'] ?? '',
       password: json['password'] ?? '',
       fullName: json['fullName'] ?? '',
-      role: UserRole.fromString(json['role'] ?? 'member'),
+      role: role,
       createdAt: _parseTimestamp(json['createdAt']),
-      lastLoginAt: json['lastLoginAt'] != null 
+      lastLoginAt: json['lastLoginAt'] != null
           ? _parseTimestamp(json['lastLoginAt'])
           : null,
       isActive: json['isActive'] ?? true,
@@ -71,19 +77,15 @@ class AppUser {
     if (timestamp == null) {
       return DateTime.now();
     }
-    
-    if (timestamp is Timestamp) {
-      return timestamp.toDate();
-    }
-    
+
     if (timestamp is String) {
       return DateTime.parse(timestamp);
     }
-    
+
     if (timestamp is DateTime) {
       return timestamp;
     }
-    
+
     // Fallback to current time
     return DateTime.now();
   }
@@ -95,8 +97,10 @@ class AppUser {
       'password': password,
       'fullName': fullName,
       'role': role.value,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'lastLoginAt': lastLoginAt != null ? Timestamp.fromDate(lastLoginAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'lastLoginAt': lastLoginAt != null
+          ? lastLoginAt!.toIso8601String()
+          : null,
       'isActive': isActive,
     };
   }

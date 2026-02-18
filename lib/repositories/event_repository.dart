@@ -1,5 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 import '../models/event.dart';
+import '../services/api_client.dart';
 
 abstract class EventRepository {
   Future<List<Event>> getEvents();
@@ -7,65 +8,65 @@ abstract class EventRepository {
   Future<List<Event>> getEventsByChapter(String chapter);
   Future<Event> getEventById(String id);
   Future<void> toggleFavorite(String eventId);
-  Future<bool> registerForEvent(String eventId);
+  Future<RegistrationResult> registerForEvent(String eventId);
   Future<bool> unregisterFromEvent(String eventId);
 }
 
+class RegistrationResult {
+  final bool success;
+  final String? message;
+
+  RegistrationResult({required this.success, this.message});
+}
+
 class EventRepositoryImpl implements EventRepository {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  EventRepositoryImpl(this._apiClient);
+
+  final ApiClient _apiClient;
   final Set<String> _favoriteEventIds = <String>{};
-  
+
   @override
   Future<List<Event>> getEvents() async {
     try {
-      print('Attempting to fetch events from Firestore...');
-      final QuerySnapshot snapshot = await _firestore
-          .collection('events')
-          .orderBy('date', descending: false)
-          .get();
-      
-      print('Successfully fetched ${snapshot.docs.length} events from Firestore');
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return Event.fromJson({
-          'id': doc.id,
-          ...data,
-        });
+      // Fetch all events
+      final response = await _apiClient.getList('/api/events');
+
+      // Fetch user's registrations
+      List<String> registeredEventIds = [];
+      try {
+        final registrationsResponse = await _apiClient.getList(
+          '/api/events/me/registrations',
+        );
+        registeredEventIds = registrationsResponse
+            .map((reg) => reg['id'].toString())
+            .toList();
+      } catch (e) {
+        print('Could not fetch user registrations: $e');
+      }
+
+      // Map events and set isRegistered based on user's registrations
+      return response.map((item) {
+        final data = item as Map<String, dynamic>;
+        final event = Event.fromJson(data);
+
+        // Override isRegistered based on actual user registration
+        final isUserRegistered = registeredEventIds.contains(event.id);
+        return event.copyWith(isRegistered: isUserRegistered);
       }).toList();
     } catch (e) {
       print('Error fetching events: $e');
-      print('Error type: ${e.runtimeType}');
-      if (e.toString().contains('Unable to establish connection')) {
-        print('Connection issue detected. This might be due to:');
-        print('1. Network connectivity issues');
-        print('2. Firestore security rules blocking access');
-        print('3. Firebase project configuration issues');
-        print('4. Platform-specific Firebase setup issues');
-      }
-      return [];
+      rethrow;
     }
   }
 
   @override
   Future<List<Event>> getEventsByCategory(String category) async {
     try {
-      Query query = _firestore.collection('events');
-      
-      if (category != 'All') {
-        query = query.where('category', isEqualTo: category);
+      final events = await getEvents();
+      if (category == 'All') {
+        return events;
       }
-      
-      final QuerySnapshot snapshot = await query
-          .orderBy('date', descending: false)
-          .get();
-      
-      return snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return Event.fromJson({
-          'id': doc.id,
-          ...data,
-        });
-      }).toList();
+      return events.where((event) => event.category == category).toList();
     } catch (e) {
       print('Error fetching events by category: $e');
       return [];
@@ -75,39 +76,15 @@ class EventRepositoryImpl implements EventRepository {
   @override
   Future<List<Event>> getEventsByChapter(String chapter) async {
     try {
-      print('Attempting to fetch events by chapter: $chapter');
-      Query query = _firestore.collection('events');
-      
-      if (chapter != 'All') {
-        query = query.where('chapter', isEqualTo: chapter);
-        print('Filtering by chapter: $chapter');
-      } else {
-        print('Fetching all events (no chapter filter)');
+      final events = await getEvents();
+      if (chapter == 'All') {
+        return events;
       }
-      
-      final QuerySnapshot snapshot = await query
-          .orderBy('date', descending: false)
-          .get();
-      
-      print('Successfully fetched ${snapshot.docs.length} events for chapter: $chapter');
-      
-      final events = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return Event.fromJson({
-          'id': doc.id,
-          ...data,
-        });
-      }).toList();
-      
-      // Log the chapters of fetched events for debugging
-      for (final event in events) {
-        print('Event: ${event.title} - Chapter: ${event.chapter.displayName}');
-      }
-      
-      return events;
+      return events
+          .where((event) => event.chapter.displayName == chapter)
+          .toList();
     } catch (e) {
       print('Error fetching events by chapter: $e');
-      print('Error type: ${e.runtimeType}');
       return [];
     }
   }
@@ -115,19 +92,22 @@ class EventRepositoryImpl implements EventRepository {
   @override
   Future<Event> getEventById(String id) async {
     try {
-      final DocumentSnapshot doc = await _firestore
-          .collection('events')
-          .doc(id)
-          .get();
-      
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        return Event.fromJson({
-          'id': doc.id,
-          ...data,
-        });
-      } else {
-        throw Exception('Event not found');
+      final data = await _apiClient.getJson('/api/events/$id');
+      final event = Event.fromJson(data);
+
+      // Check if user is registered for this event
+      try {
+        final registrationsResponse = await _apiClient.getList(
+          '/api/events/me/registrations',
+        );
+        final registeredEventIds = registrationsResponse
+            .map((reg) => reg['id'].toString())
+            .toList();
+        final isUserRegistered = registeredEventIds.contains(event.id);
+        return event.copyWith(isRegistered: isUserRegistered);
+      } catch (e) {
+        print('Could not fetch user registrations: $e');
+        return event;
       }
     } catch (e) {
       print('Error fetching event by ID: $e');
@@ -137,8 +117,6 @@ class EventRepositoryImpl implements EventRepository {
 
   @override
   Future<void> toggleFavorite(String eventId) async {
-    // For now, we'll keep favorites in memory
-    // In a real app, you might want to store this in Firestore user document
     if (_favoriteEventIds.contains(eventId)) {
       _favoriteEventIds.remove(eventId);
     } else {
@@ -147,74 +125,58 @@ class EventRepositoryImpl implements EventRepository {
   }
 
   @override
-  Future<bool> registerForEvent(String eventId) async {
+  Future<RegistrationResult> registerForEvent(String eventId) async {
     try {
-      print('Attempting to register for event: $eventId');
-      
-      // Use Firestore transaction to safely increment registrations
-      await _firestore.runTransaction((transaction) async {
-        final eventRef = _firestore.collection('events').doc(eventId);
-        final eventDoc = await transaction.get(eventRef);
-        
-        if (!eventDoc.exists) {
-          throw Exception('Event not found');
-        }
-        
-        final currentRegistrations = eventDoc.data()?['registrations'] ?? 0;
-        final attendeesNeeded = eventDoc.data()?['attendeesNeeded'] ?? 0;
-        
-        // Check if event is full
-        if (currentRegistrations >= attendeesNeeded) {
-          throw Exception('Event is full');
-        }
-        
-        // Increment registrations
-        transaction.update(eventRef, {
-          'registrations': currentRegistrations + 1,
-        });
-      });
-      
-      print('Successfully registered for event: $eventId');
-      return true;
+      await _apiClient.postJson(
+        '/api/events/$eventId/register',
+        <String, dynamic>{},
+      );
+      return RegistrationResult(success: true);
     } catch (e) {
       print('Error registering for event: $e');
-      return false;
+
+      String errorMessage = 'Failed to register. Please try again.';
+      final exceptionStr = e.toString();
+
+      // If user is already registered, consider it a success
+      if (exceptionStr.contains('already registered')) {
+        return RegistrationResult(success: true, message: 'Already registered');
+      }
+
+      // Parse the JSON from the error response if it exists
+      if (exceptionStr.contains('ApiException')) {
+        try {
+          // Extract the JSON part from "ApiException(statusCode): {json}"
+          final jsonStart = exceptionStr.indexOf('{');
+          if (jsonStart != -1) {
+            final jsonStr = exceptionStr.substring(jsonStart);
+            final decoded = jsonDecode(jsonStr);
+
+            if (decoded is Map && decoded.containsKey('message')) {
+              errorMessage = decoded['message'];
+            }
+          }
+        } catch (parseError) {
+          print('Could not parse error JSON: $parseError');
+          // Fall back to checking the string
+          if (exceptionStr.contains('Event has reached maximum capacity')) {
+            errorMessage = 'Event is full - no spots available';
+          }
+        }
+      }
+
+      return RegistrationResult(success: false, message: errorMessage);
     }
   }
 
   @override
   Future<bool> unregisterFromEvent(String eventId) async {
     try {
-      print('Attempting to unregister from event: $eventId');
-      
-      // Use Firestore transaction to safely decrement registrations
-      await _firestore.runTransaction((transaction) async {
-        final eventRef = _firestore.collection('events').doc(eventId);
-        final eventDoc = await transaction.get(eventRef);
-        
-        if (!eventDoc.exists) {
-          throw Exception('Event not found');
-        }
-        
-        final currentRegistrations = eventDoc.data()?['registrations'] ?? 0;
-        
-        // Check if there are registrations to decrement
-        if (currentRegistrations <= 0) {
-          throw Exception('No registrations to remove');
-        }
-        
-        // Decrement registrations
-        transaction.update(eventRef, {
-          'registrations': currentRegistrations - 1,
-        });
-      });
-      
-      print('Successfully unregistered from event: $eventId');
+      await _apiClient.delete('/api/events/$eventId/register');
       return true;
     } catch (e) {
-      print('Error unregistering from event: $e');
+      print('Error unregistering for event: $e');
       return false;
     }
   }
-
 }

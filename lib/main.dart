@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
 import 'repositories/event_repository.dart';
-import 'repositories/user_repository.dart';
+import 'repositories/admin_repository.dart';
 import 'screens/home/home_screen.dart';
 import 'screens/home/home_view_model.dart';
 import 'screens/favorites/favorites_screen.dart';
@@ -15,14 +13,14 @@ import 'screens/profile/profile_screen.dart';
 import 'screens/profile/profile_view_model.dart';
 import 'screens/login/login_screen.dart';
 import 'screens/login/login_view_model.dart';
+import 'screens/admin/admin_screen.dart';
 import 'services/firestore_auth_provider.dart';
+import 'services/api_client.dart';
+import 'services/api_config.dart';
 import 'widgets/custom_nav_bar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
   runApp(const IEEEApp());
 }
 
@@ -33,34 +31,32 @@ class IEEEApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider<UserRepository>(
-          create: (_) => UserRepositoryImpl(),
+        Provider<ApiClient>(
+          create: (_) => ApiClient(baseUrl: ApiConfig.baseUrl),
         ),
         ChangeNotifierProvider<AuthProvider>(
-          create: (context) => AuthProvider(context.read<UserRepository>()),
+          create: (context) => AuthProvider(context.read<ApiClient>()),
         ),
         Provider<EventRepository>(
-          create: (_) => EventRepositoryImpl(),
+          create: (context) => EventRepositoryImpl(context.read<ApiClient>()),
+        ),
+        Provider<AdminRepository>(
+          create: (context) => AdminRepositoryImpl(context.read<ApiClient>()),
         ),
         ChangeNotifierProvider<HomeViewModel>(
-          create: (context) => HomeViewModel(
-            context.read<EventRepository>(),
-          ),
+          create: (context) => HomeViewModel(context.read<EventRepository>()),
         ),
         ChangeNotifierProvider<FavoritesViewModel>(
-          create: (context) => FavoritesViewModel(
-            context.read<EventRepository>(),
-          ),
+          create: (context) =>
+              FavoritesViewModel(context.read<EventRepository>()),
         ),
         ChangeNotifierProvider<CalendarViewModel>(
-          create: (context) => CalendarViewModel(
-            context.read<EventRepository>(),
-          ),
+          create: (context) =>
+              CalendarViewModel(context.read<EventRepository>()),
         ),
         ChangeNotifierProvider<EventDetailsViewModel>(
-          create: (context) => EventDetailsViewModel(
-            context.read<EventRepository>(),
-          ),
+          create: (context) =>
+              EventDetailsViewModel(context.read<EventRepository>()),
         ),
         ChangeNotifierProvider<ProfileViewModel>(
           create: (context) => ProfileViewModel(
@@ -69,9 +65,7 @@ class IEEEApp extends StatelessWidget {
           ),
         ),
         ChangeNotifierProvider<LoginViewModel>(
-          create: (context) => LoginViewModel(
-            context.read<AuthProvider>(),
-          ),
+          create: (context) => LoginViewModel(context.read<AuthProvider>()),
         ),
       ],
       child: MaterialApp(
@@ -131,12 +125,10 @@ class IEEEApp extends StatelessWidget {
           builder: (context, authProvider, child) {
             if (authProvider.isLoading) {
               return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                body: Center(child: CircularProgressIndicator()),
               );
             }
-            
+
             if (authProvider.isSignedIn) {
               return const MainApp();
             } else {
@@ -144,9 +136,7 @@ class IEEEApp extends StatelessWidget {
             }
           },
         ),
-        routes: {
-          '/main': (context) => const MainApp(),
-        },
+        routes: {'/main': (context) => const MainApp()},
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -165,33 +155,45 @@ class _MainAppState extends State<MainApp> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      extendBodyBehindAppBar: false,
-      body: SafeArea(
-        child: _getCurrentScreen(),
-      ),
-      bottomNavigationBar: CustomNavBar(
-        currentItem: _currentItem,
-        onItemSelected: (item) {
-          setState(() {
-            _currentItem = item;
-          });
-        },
-      ),
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        return Scaffold(
+          extendBodyBehindAppBar: false,
+          body: SafeArea(child: _getCurrentScreen()),
+          bottomNavigationBar: CustomNavBar(
+            currentItem: _currentItem,
+            onItemSelected: (item) {
+              setState(() {
+                _currentItem = item;
+              });
+            },
+            isAdmin: authProvider.isAdmin,
+          ),
+        );
+      },
     );
   }
 
   Widget _getCurrentScreen() {
-    switch (_currentItem) {
-      case NavBarItem.home:
-        return const HomeScreen();
-      case NavBarItem.favorites:
-        return const FavoritesScreen();
-      case NavBarItem.calendar:
-        return const CalendarScreen();
-      case NavBarItem.profile:
-        return const ProfileScreen();
-    }
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, _) {
+        switch (_currentItem) {
+          case NavBarItem.home:
+            return const HomeScreen();
+          case NavBarItem.favorites:
+            return const FavoritesScreen();
+          case NavBarItem.calendar:
+            return const CalendarScreen();
+          case NavBarItem.profile:
+            return const ProfileScreen();
+          case NavBarItem.admin:
+            if (authProvider.isAdmin) {
+              return const AdminScreen();
+            } else {
+              return const ProfileScreen();
+            }
+        }
+      },
+    );
   }
-
 }
