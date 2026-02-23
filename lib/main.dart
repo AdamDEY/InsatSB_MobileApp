@@ -153,10 +153,24 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   NavBarItem _currentItem = NavBarItem.home;
 
+  void _ensureValidNavItem(bool isAdmin) {
+    if (!isAdmin && _currentItem == NavBarItem.admin) {
+      // Schedule state change after build to avoid setState during build.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _currentItem = NavBarItem.home;
+          });
+        }
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
+        _ensureValidNavItem(authProvider.isAdmin);
         return Scaffold(
           extendBodyBehindAppBar: false,
           body: SafeArea(child: _getCurrentScreen()),
@@ -190,7 +204,7 @@ class _MainAppState extends State<MainApp> {
             if (authProvider.isAdmin) {
               return const AdminScreen();
             } else {
-              return const ProfileScreen();
+              return const HomeScreen();
             }
         }
       },

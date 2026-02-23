@@ -4,7 +4,8 @@ enum Chapter {
   pesPels('PES/PELS'),
   ias('IAS'),
   sight('SIGHT'),
-  wie('WIE');
+  wie('WIE'),
+  embs('EMBS');
 
   const Chapter(this.displayName);
   final String displayName;
@@ -24,6 +25,8 @@ enum Chapter {
         return Chapter.sight;
       case 'wie':
         return Chapter.wie;
+      case 'embs':
+        return Chapter.embs;
       default:
         throw ArgumentError('Invalid chapter: $value');
     }

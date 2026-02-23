@@ -10,13 +10,15 @@ abstract class EventRepository {
   Future<void> toggleFavorite(String eventId);
   Future<RegistrationResult> registerForEvent(String eventId);
   Future<bool> unregisterFromEvent(String eventId);
+  Future<String?> getCheckinToken(String eventId);
 }
 
 class RegistrationResult {
   final bool success;
   final String? message;
+  final String? checkinToken;
 
-  RegistrationResult({required this.success, this.message});
+  RegistrationResult({required this.success, this.message, this.checkinToken});
 }
 
 class EventRepositoryImpl implements EventRepository {
@@ -127,11 +129,12 @@ class EventRepositoryImpl implements EventRepository {
   @override
   Future<RegistrationResult> registerForEvent(String eventId) async {
     try {
-      await _apiClient.postJson(
+      final response = await _apiClient.postJson(
         '/api/events/$eventId/register',
         <String, dynamic>{},
       );
-      return RegistrationResult(success: true);
+      final token = response['checkinToken'] as String?;
+      return RegistrationResult(success: true, checkinToken: token);
     } catch (e) {
       print('Error registering for event: $e');
 
@@ -177,6 +180,19 @@ class EventRepositoryImpl implements EventRepository {
     } catch (e) {
       print('Error unregistering for event: $e');
       return false;
+    }
+  }
+
+  @override
+  Future<String?> getCheckinToken(String eventId) async {
+    try {
+      final response = await _apiClient.getJson(
+        '/api/events/$eventId/checkin-token',
+      );
+      return response['checkinToken'] as String?;
+    } catch (e) {
+      print('Error fetching checkin token: $e');
+      return null;
     }
   }
 }

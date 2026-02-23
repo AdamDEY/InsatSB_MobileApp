@@ -17,6 +17,9 @@ abstract class AdminRepository {
   // Registration management
   Future<List<Map<String, dynamic>>> getEventRegistrations(String eventId);
   Future<void> removeUserRegistration(String eventId, String userId);
+
+  // Check-in
+  Future<Map<String, dynamic>> verifyCheckin(String token);
 }
 
 class AdminRepositoryImpl implements AdminRepository {
@@ -89,5 +92,14 @@ class AdminRepositoryImpl implements AdminRepository {
   @override
   Future<void> removeUserRegistration(String eventId, String userId) async {
     await _apiClient.delete('/api/events/$eventId/registration/$userId');
+  }
+
+  // Check-in
+  @override
+  Future<Map<String, dynamic>> verifyCheckin(String token) async {
+    final response = await _apiClient.postJson('/api/events/check-in', {
+      'token': token,
+    });
+    return response;
   }
 }

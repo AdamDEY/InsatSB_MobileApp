@@ -49,9 +49,13 @@ class _AdminEventsScreenState extends State<AdminEventsScreen> {
               if (viewModel.errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: SnackBar(
-                    content: Text(viewModel.errorMessage!),
-                    backgroundColor: Colors.red,
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(viewModel.errorMessage!),
                   ),
                 ),
               Expanded(

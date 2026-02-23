@@ -6,6 +6,7 @@ import 'admin_users_view_model.dart';
 import 'admin_events_screen.dart';
 import 'admin_users_screen.dart';
 import 'admin_registrations_screen.dart';
+import 'admin_checkin_screen.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -21,7 +22,7 @@ class _AdminScreenState extends State<AdminScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -53,6 +54,7 @@ class _AdminScreenState extends State<AdminScreen>
               Tab(icon: Icon(Icons.event), text: 'Events'),
               Tab(icon: Icon(Icons.people), text: 'Users'),
               Tab(icon: Icon(Icons.app_registration), text: 'Registrations'),
+              Tab(icon: Icon(Icons.qr_code_scanner), text: 'Check-in'),
             ],
           ),
         ),
@@ -62,6 +64,7 @@ class _AdminScreenState extends State<AdminScreen>
             AdminEventsScreen(),
             AdminUsersScreen(),
             AdminRegistrationsScreen(),
+            AdminCheckinScreen(),
           ],
         ),
       ),

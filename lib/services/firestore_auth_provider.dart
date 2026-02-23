@@ -35,6 +35,12 @@ class AuthProvider extends ChangeNotifier {
   bool canManageEvents() => isAdmin;
   bool canViewAnalytics() => isAdmin;
 
+  Future<void> _refreshCurrentUser() async {
+    final userJson = await _apiClient.getJson('/api/users/me');
+    _user = AppUser.fromJson(userJson);
+    await _apiClient.saveUserData(userJson);
+  }
+
   void _init() async {
     _isLoading = true;
     notifyListeners();
@@ -54,7 +60,11 @@ class AuthProvider extends ChangeNotifier {
           print('DEBUG: Token valid: $isValid'); // ADD THIS
 
           if (isValid) {
-            _user = AppUser.fromJson(savedUserData);
+            try {
+              await _refreshCurrentUser();
+            } catch (_) {
+              _user = AppUser.fromJson(savedUserData);
+            }
             _isLoading = false;
             notifyListeners();
             return;
@@ -97,8 +107,12 @@ class AuthProvider extends ChangeNotifier {
       }
 
       await _apiClient.setToken(token);
-      await _apiClient.saveUserData(userJson);
-      _user = AppUser.fromJson(userJson);
+      try {
+        await _refreshCurrentUser();
+      } catch (_) {
+        await _apiClient.saveUserData(userJson);
+        _user = AppUser.fromJson(userJson);
+      }
       _setLoading(false);
       notifyListeners();
       return true;
@@ -135,8 +149,12 @@ class AuthProvider extends ChangeNotifier {
       }
 
       await _apiClient.setToken(token);
-      await _apiClient.saveUserData(userJson);
-      _user = AppUser.fromJson(userJson);
+      try {
+        await _refreshCurrentUser();
+      } catch (_) {
+        await _apiClient.saveUserData(userJson);
+        _user = AppUser.fromJson(userJson);
+      }
       _setLoading(false);
       notifyListeners();
       return true;

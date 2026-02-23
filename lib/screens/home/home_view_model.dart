@@ -4,11 +4,20 @@ import '../../repositories/event_repository.dart';
 
 class HomeViewModel extends ChangeNotifier {
   final EventRepository _eventRepository;
-  
+
   HomeViewModel(this._eventRepository);
 
   List<Event> _events = [];
-  final List<String> _categories = ['All', 'CS', 'RAS', 'PES/PELS', 'IAS', 'SIGHT', 'WIE'];
+  final List<String> _categories = [
+    'All',
+    'CS',
+    'RAS',
+    'PES/PELS',
+    'IAS',
+    'SIGHT',
+    'WIE',
+    'EMBS',
+  ];
   String _selectedCategory = 'All';
   bool _isLoading = false;
   String? _error;
@@ -29,26 +38,34 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> loadEvents() async {
     _setLoading(true);
     _error = null;
-    
+
     try {
       print('HomeViewModel: Loading events for category: $_selectedCategory');
-      
+
       // Get all events first
       final allEvents = await _eventRepository.getEvents();
-      print('HomeViewModel: Retrieved ${allEvents.length} total events from repository');
-      
+      print(
+        'HomeViewModel: Retrieved ${allEvents.length} total events from repository',
+      );
+
       if (_selectedCategory == 'All') {
         _events = allEvents;
         print('HomeViewModel: Using all events (${_events.length})');
       } else {
         // Filter locally (this works perfectly!)
-        _events = allEvents.where((event) => event.chapter.displayName == _selectedCategory).toList();
-        print('HomeViewModel: Filtered to ${_events.length} events for chapter: $_selectedCategory');
+        _events = allEvents
+            .where((event) => event.chapter.displayName == _selectedCategory)
+            .toList();
+        print(
+          'HomeViewModel: Filtered to ${_events.length} events for chapter: $_selectedCategory',
+        );
       }
-      
+
       print('HomeViewModel: Final event count: ${_events.length}');
       for (final event in _events) {
-        print('HomeViewModel: Event - ${event.title} (${event.chapter.displayName})');
+        print(
+          'HomeViewModel: Event - ${event.title} (${event.chapter.displayName})',
+        );
       }
     } catch (e) {
       print('HomeViewModel: Error loading events: $e');
@@ -62,9 +79,11 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> selectCategory(String category) async {
     print('HomeViewModel: selectCategory called with: $category');
     print('HomeViewModel: Current selected category: $_selectedCategory');
-    
+
     if (_selectedCategory != category) {
-      print('HomeViewModel: Category changed from $_selectedCategory to $category');
+      print(
+        'HomeViewModel: Category changed from $_selectedCategory to $category',
+      );
       _selectedCategory = category;
       print('HomeViewModel: Notifying listeners...');
       notifyListeners();
@@ -80,7 +99,7 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> toggleFavorite(String eventId) async {
     try {
       await _eventRepository.toggleFavorite(eventId);
-      
+
       // Update local state
       final index = _events.indexWhere((event) => event.id == eventId);
       if (index != -1) {

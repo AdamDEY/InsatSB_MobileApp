@@ -89,7 +89,12 @@ class _AdminRegistrationsScreenState extends State<AdminRegistrationsScreen> {
     try {
       final adminRepository = context.read<AdminRepository>();
       if (_selectedEventId != null) {
+        print(
+          '🗑️ Attempting to remove user $userId from event $_selectedEventId',
+        );
         await adminRepository.removeUserRegistration(_selectedEventId!, userId);
+        print('✅ User removed successfully');
+
         // Reload registrations
         if (_selectedEventId != null) {
           final registrations = await adminRepository.getEventRegistrations(
@@ -98,11 +103,18 @@ class _AdminRegistrationsScreenState extends State<AdminRegistrationsScreen> {
           setState(() {
             _registrations = registrations;
           });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$userName removed from event')),
+          );
         }
       }
     } catch (e) {
+      print('❌ Error removing registration: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to remove registration: $e')),
+        SnackBar(
+          content: Text('Failed to remove registration: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -242,7 +254,7 @@ class _AdminRegistrationsScreenState extends State<AdminRegistrationsScreen> {
                           trailing: IconButton(
                             icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () => _removeRegistration(
-                              reg['id'],
+                              reg['id']?.toString() ?? '',
                               reg['fullName'] ?? 'User',
                             ),
                           ),
