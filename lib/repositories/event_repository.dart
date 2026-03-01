@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/event.dart';
 import '../services/api_client.dart';
 
@@ -11,6 +12,7 @@ abstract class EventRepository {
   Future<RegistrationResult> registerForEvent(String eventId);
   Future<bool> unregisterFromEvent(String eventId);
   Future<String?> getCheckinToken(String eventId);
+  Set<String> get favoriteEventIds;
 }
 
 class RegistrationResult {
@@ -26,104 +28,121 @@ class EventRepositoryImpl implements EventRepository {
 
   final ApiClient _apiClient;
   final Set<String> _favoriteEventIds = <String>{};
+  bool _favoritesLoaded = false;
+
+  static const String _favoritesKey = 'favorite_event_ids';
+
+  @override
+  Set<String> get favoriteEventIds => _favoriteEventIds;
+
+  /// Load favorites from SharedPreferences (called lazily on first access)
+  Future<void> _ensureFavoritesLoaded() async {
+    if (_favoritesLoaded) return;
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getStringList(_favoritesKey);
+    if (saved != null) {
+      _favoriteEventIds.addAll(saved);
+    }
+    _favoritesLoaded = true;
+  }
+
+  /// Save favorites to SharedPreferences
+  Future<void> _saveFavorites() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_favoritesKey, _favoriteEventIds.toList());
+  }
+
+  /// Apply favorite status to a list of events based on _favoriteEventIds
+  List<Event> _applyFavoriteStatus(List<Event> events) {
+    return events.map((event) {
+      final isFav = _favoriteEventIds.contains(event.id);
+      return event.copyWith(isFavorite: isFav);
+    }).toList();
+  }
 
   @override
   Future<List<Event>> getEvents() async {
     try {
-      // Fetch all events
-      final response = await _apiClient.getList('/api/events');
+      await _ensureFavoritesLoaded();
 
-      // Fetch user's registrations
-      List<String> registeredEventIds = [];
-      try {
-        final registrationsResponse = await _apiClient.getList(
-          '/api/events/me/registrations',
-        );
-        registeredEventIds = registrationsResponse
-            .map((reg) => reg['id'].toString())
-            .toList();
-      } catch (e) {
-        print('Could not fetch user registrations: $e');
-      }
+      // Fetch events and registrations in parallel
+      final results = await Future.wait([
+        _apiClient.getList('/api/events'),
+        _apiClient
+            .getList('/api/events/me/registrations')
+            .catchError((_) => <dynamic>[]),
+      ]);
+
+      final response = results[0];
+      final registrationsResponse = results[1];
+
+      final registeredEventIds = registrationsResponse
+          .map((reg) => reg['id'].toString())
+          .toSet();
 
       // Map events and set isRegistered based on user's registrations
-      return response.map((item) {
+      final events = response.map((item) {
         final data = item as Map<String, dynamic>;
         final event = Event.fromJson(data);
-
-        // Override isRegistered based on actual user registration
         final isUserRegistered = registeredEventIds.contains(event.id);
         return event.copyWith(isRegistered: isUserRegistered);
       }).toList();
+
+      // Apply favorite status from local storage
+      return _applyFavoriteStatus(events);
     } catch (e) {
-      print('Error fetching events: $e');
       rethrow;
     }
   }
 
   @override
   Future<List<Event>> getEventsByCategory(String category) async {
-    try {
-      final events = await getEvents();
-      if (category == 'All') {
-        return events;
-      }
-      return events.where((event) => event.category == category).toList();
-    } catch (e) {
-      print('Error fetching events by category: $e');
-      return [];
-    }
+    final events = await getEvents();
+    if (category == 'All') return events;
+    return events.where((event) => event.category == category).toList();
   }
 
   @override
   Future<List<Event>> getEventsByChapter(String chapter) async {
-    try {
-      final events = await getEvents();
-      if (chapter == 'All') {
-        return events;
-      }
-      return events
-          .where((event) => event.chapter.displayName == chapter)
-          .toList();
-    } catch (e) {
-      print('Error fetching events by chapter: $e');
-      return [];
-    }
+    final events = await getEvents();
+    if (chapter == 'All') return events;
+    return events
+        .where((event) => event.chapter.displayName == chapter)
+        .toList();
   }
 
   @override
   Future<Event> getEventById(String id) async {
-    try {
-      final data = await _apiClient.getJson('/api/events/$id');
-      final event = Event.fromJson(data);
+    await _ensureFavoritesLoaded();
+    final data = await _apiClient.getJson('/api/events/$id');
+    final event = Event.fromJson(data);
 
-      // Check if user is registered for this event
-      try {
-        final registrationsResponse = await _apiClient.getList(
-          '/api/events/me/registrations',
-        );
-        final registeredEventIds = registrationsResponse
-            .map((reg) => reg['id'].toString())
-            .toList();
-        final isUserRegistered = registeredEventIds.contains(event.id);
-        return event.copyWith(isRegistered: isUserRegistered);
-      } catch (e) {
-        print('Could not fetch user registrations: $e');
-        return event;
-      }
-    } catch (e) {
-      print('Error fetching event by ID: $e');
-      throw Exception('Event not found');
+    // Check if user is registered for this event
+    try {
+      final registrationsResponse = await _apiClient.getList(
+        '/api/events/me/registrations',
+      );
+      final registeredEventIds = registrationsResponse
+          .map((reg) => reg['id'].toString())
+          .toSet();
+      return event.copyWith(
+        isRegistered: registeredEventIds.contains(event.id),
+        isFavorite: _favoriteEventIds.contains(event.id),
+      );
+    } catch (_) {
+      return event.copyWith(isFavorite: _favoriteEventIds.contains(event.id));
     }
   }
 
   @override
   Future<void> toggleFavorite(String eventId) async {
+    await _ensureFavoritesLoaded();
     if (_favoriteEventIds.contains(eventId)) {
       _favoriteEventIds.remove(eventId);
     } else {
       _favoriteEventIds.add(eventId);
     }
+    await _saveFavorites();
   }
 
   @override
@@ -136,9 +155,6 @@ class EventRepositoryImpl implements EventRepository {
       final token = response['checkinToken'] as String?;
       return RegistrationResult(success: true, checkinToken: token);
     } catch (e) {
-      print('Error registering for event: $e');
-
-      String errorMessage = 'Failed to register. Please try again.';
       final exceptionStr = e.toString();
 
       // If user is already registered, consider it a success
@@ -146,23 +162,21 @@ class EventRepositoryImpl implements EventRepository {
         return RegistrationResult(success: true, message: 'Already registered');
       }
 
+      String errorMessage = 'Failed to register. Please try again.';
+
       // Parse the JSON from the error response if it exists
       if (exceptionStr.contains('ApiException')) {
         try {
-          // Extract the JSON part from "ApiException(statusCode): {json}"
           final jsonStart = exceptionStr.indexOf('{');
           if (jsonStart != -1) {
             final jsonStr = exceptionStr.substring(jsonStart);
             final decoded = jsonDecode(jsonStr);
-
             if (decoded is Map && decoded.containsKey('message')) {
               errorMessage = decoded['message'];
             }
           }
-        } catch (parseError) {
-          print('Could not parse error JSON: $parseError');
-          // Fall back to checking the string
-          if (exceptionStr.contains('Event has reached maximum capacity')) {
+        } catch (_) {
+          if (exceptionStr.contains('maximum capacity')) {
             errorMessage = 'Event is full - no spots available';
           }
         }
@@ -177,8 +191,7 @@ class EventRepositoryImpl implements EventRepository {
     try {
       await _apiClient.delete('/api/events/$eventId/register');
       return true;
-    } catch (e) {
-      print('Error unregistering for event: $e');
+    } catch (_) {
       return false;
     }
   }
@@ -190,8 +203,7 @@ class EventRepositoryImpl implements EventRepository {
         '/api/events/$eventId/checkin-token',
       );
       return response['checkinToken'] as String?;
-    } catch (e) {
-      print('Error fetching checkin token: $e');
+    } catch (_) {
       return null;
     }
   }

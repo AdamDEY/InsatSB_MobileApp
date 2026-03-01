@@ -13,6 +13,9 @@ class ApiClient {
   final http.Client _httpClient;
   String? _token;
 
+  /// Request timeout duration
+  static const Duration _timeout = Duration(seconds: 15);
+
   /// Initialize by loading saved token from storage
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
@@ -68,7 +71,7 @@ class ApiClient {
   }
 
   Map<String, String> _headers({bool json = true}) {
-    final headers = <String, String>{};
+    final headers = <String, String>{'Accept': 'application/json'};
     if (json) {
       headers['Content-Type'] = 'application/json';
     }
@@ -79,18 +82,16 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> getJson(String path) async {
-    final response = await _httpClient.get(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-    );
+    final response = await _httpClient
+        .get(Uri.parse('$baseUrl$path'), headers: _headers())
+        .timeout(_timeout);
     return _decodeJson(response);
   }
 
   Future<List<dynamic>> getList(String path) async {
-    final response = await _httpClient.get(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-    );
+    final response = await _httpClient
+        .get(Uri.parse('$baseUrl$path'), headers: _headers())
+        .timeout(_timeout);
     return _decodeList(response);
   }
 
@@ -98,11 +99,13 @@ class ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
-    final response = await _httpClient.post(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-      body: jsonEncode(body),
-    );
+    final response = await _httpClient
+        .post(
+          Uri.parse('$baseUrl$path'),
+          headers: _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
     return _decodeJson(response);
   }
 
@@ -110,19 +113,20 @@ class ApiClient {
     String path,
     Map<String, dynamic> body,
   ) async {
-    final response = await _httpClient.put(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-      body: jsonEncode(body),
-    );
+    final response = await _httpClient
+        .put(
+          Uri.parse('$baseUrl$path'),
+          headers: _headers(),
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
     return _decodeJson(response);
   }
 
   Future<void> delete(String path) async {
-    final response = await _httpClient.delete(
-      Uri.parse('$baseUrl$path'),
-      headers: _headers(),
-    );
+    final response = await _httpClient
+        .delete(Uri.parse('$baseUrl$path'), headers: _headers())
+        .timeout(_timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException(response.statusCode, response.body);
     }

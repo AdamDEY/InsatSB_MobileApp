@@ -94,13 +94,11 @@ class AppUser {
     return {
       'id': id,
       'email': email,
-      'password': password,
       'fullName': fullName,
       'role': role.value,
+      'isAdmin': role.isAdmin,
       'createdAt': createdAt.toIso8601String(),
-      'lastLoginAt': lastLoginAt != null
-          ? lastLoginAt!.toIso8601String()
-          : null,
+      'lastLoginAt': lastLoginAt?.toIso8601String(),
       'isActive': isActive,
     };
   }

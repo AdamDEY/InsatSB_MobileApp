@@ -51,13 +51,10 @@ class AuthProvider extends ChangeNotifier {
 
       // Try to restore user session from saved data
       final savedUserData = await _apiClient.loadUserData();
-      print('DEBUG: Saved user data: $savedUserData'); // ADD THIS
-      print('DEBUG: Token: ${_apiClient.getToken()}'); // ADD THIS
       if (savedUserData != null && _apiClient.getToken() != null) {
         try {
           // Validate token with backend
           final isValid = await validateToken();
-          print('DEBUG: Token valid: $isValid'); // ADD THIS
 
           if (isValid) {
             try {

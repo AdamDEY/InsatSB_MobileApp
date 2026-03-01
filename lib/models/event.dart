@@ -10,14 +10,18 @@ enum Chapter {
   const Chapter(this.displayName);
   final String displayName;
 
-  static Chapter fromString(String value) {
+  /// Parse a chapter string from the API. Returns null if the value is
+  /// empty, 'null', or not recognised — callers should handle the null case.
+  static Chapter? tryFromString(String? value) {
+    if (value == null || value.isEmpty || value == 'null') return null;
     switch (value.toLowerCase()) {
       case 'cs':
         return Chapter.cs;
       case 'ras':
         return Chapter.ras;
       case 'pes/pels':
-      case 'pesxpels':
+      case 'pespels':
+      case 'pes_pels':
         return Chapter.pesPels;
       case 'ias':
         return Chapter.ias;
@@ -28,8 +32,12 @@ enum Chapter {
       case 'embs':
         return Chapter.embs;
       default:
-        throw ArgumentError('Invalid chapter: $value');
+        return null;
     }
+  }
+
+  static Chapter fromString(String value) {
+    return tryFromString(value) ?? Chapter.cs;
   }
 }
 
@@ -86,7 +94,7 @@ class Event {
       attendeesNeeded: _parseInt(json['attendeesNeeded']),
       registrations: _parseInt(json['registrations']),
       level: json['level']?.toString() ?? '',
-      chapter: Chapter.fromString(json['chapter']?.toString() ?? 'cs'),
+      chapter: _parseChapter(json['chapter']),
       speakerFullName: json['speakerFullName']?.toString() ?? '',
       aboutSpeaker: json['aboutSpeaker']?.toString() ?? '',
       prerequisites: json['prerequisites']?.toString() ?? '',
@@ -97,6 +105,18 @@ class Event {
       isFavorite: json['isFavorite'] == true,
       isRegistered: json['isRegistered'] == true,
     );
+  }
+
+  /// Parse chapter from API JSON value, logging a warning if it's null/missing.
+  static Chapter _parseChapter(dynamic value) {
+    final chapter = Chapter.tryFromString(value?.toString());
+    if (chapter == null) {
+      print(
+        '⚠️ Event has null/invalid chapter value: $value — defaulting to CS',
+      );
+      return Chapter.cs;
+    }
+    return chapter;
   }
 
   static DateTime _parseDateTime(dynamic value) {

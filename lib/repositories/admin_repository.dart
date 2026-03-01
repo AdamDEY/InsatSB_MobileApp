@@ -11,6 +11,7 @@ abstract class AdminRepository {
 
   // User management
   Future<List<AppUser>> getAllUsers();
+  Future<AppUser> createUser(Map<String, dynamic> userData);
   Future<void> updateUserRole(String userId, bool isAdmin);
   Future<void> deleteUser(String userId);
 
@@ -66,6 +67,13 @@ class AdminRepositoryImpl implements AdminRepository {
     return response
         .map((user) => AppUser.fromJson(user as Map<String, dynamic>))
         .toList();
+  }
+
+  @override
+  Future<AppUser> createUser(Map<String, dynamic> userData) async {
+    final response = await _apiClient.postJson('/api/auth/register', userData);
+    final userJson = response['user'] as Map<String, dynamic>;
+    return AppUser.fromJson(userJson);
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/user.dart';
 import 'admin_users_view_model.dart';
+import 'user_form_dialog.dart';
 
 class AdminUsersScreen extends StatefulWidget {
   const AdminUsersScreen({super.key});
@@ -28,9 +29,20 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Total Users: ${viewModel.users.length}',
-                  style: Theme.of(context).textTheme.titleLarge,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total Users: ${viewModel.users.length}',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          _showCreateUserDialog(context, viewModel),
+                      icon: const Icon(Icons.person_add),
+                      label: const Text('New User'),
+                    ),
+                  ],
                 ),
               ),
               if (viewModel.errorMessage != null)
@@ -132,6 +144,32 @@ class _AdminUsersScreenState extends State<AdminUsersScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showCreateUserDialog(
+    BuildContext context,
+    AdminUsersViewModel viewModel,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => UserFormDialog(
+        onSubmit: (userData) async {
+          final success = await viewModel.createUser(userData);
+          if (context.mounted) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  success
+                      ? 'User created successfully'
+                      : viewModel.errorMessage ?? 'Failed to create user',
+                ),
+              ),
+            );
+          }
+        },
       ),
     );
   }

@@ -24,6 +24,11 @@ class _EventFormDialogState extends State<EventFormDialog> {
   late TextEditingController _speakerBioController;
   late TextEditingController _prerequisitesController;
   late TextEditingController _linkedinController;
+  late Chapter _selectedChapter;
+  late bool _isFeatured;
+
+  // Available levels for the dropdown
+  static const List<String> _levels = ['Beginner', 'Intermediate', 'Advanced'];
 
   @override
   void initState() {
@@ -40,10 +45,14 @@ class _EventFormDialogState extends State<EventFormDialog> {
       text: widget.event?.date.toString().split(' ')[0] ?? '',
     );
     _startTimeController = TextEditingController(
-      text: widget.event?.startTime.toString() ?? '',
+      text: widget.event != null
+          ? '${widget.event!.startTime.hour.toString().padLeft(2, '0')}:${widget.event!.startTime.minute.toString().padLeft(2, '0')}'
+          : '',
     );
     _endTimeController = TextEditingController(
-      text: widget.event?.endTime.toString() ?? '',
+      text: widget.event != null
+          ? '${widget.event!.endTime.hour.toString().padLeft(2, '0')}:${widget.event!.endTime.minute.toString().padLeft(2, '0')}'
+          : '',
     );
     _categoryController = TextEditingController(
       text: widget.event?.category ?? '',
@@ -51,7 +60,9 @@ class _EventFormDialogState extends State<EventFormDialog> {
     _attendeesNeededController = TextEditingController(
       text: widget.event?.attendeesNeeded.toString() ?? '',
     );
-    _levelController = TextEditingController(text: widget.event?.level ?? '');
+    _levelController = TextEditingController(
+      text: widget.event?.level ?? 'Beginner',
+    );
     _speakerNameController = TextEditingController(
       text: widget.event?.speakerFullName ?? '',
     );
@@ -64,6 +75,8 @@ class _EventFormDialogState extends State<EventFormDialog> {
     _linkedinController = TextEditingController(
       text: widget.event?.speakerLinkedIn ?? '',
     );
+    _selectedChapter = widget.event?.chapter ?? Chapter.cs;
+    _isFeatured = widget.event?.isFeatured ?? false;
   }
 
   @override
@@ -91,10 +104,12 @@ class _EventFormDialogState extends State<EventFormDialog> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 widget.event == null ? 'Create Event' : 'Edit Event',
                 style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -108,17 +123,83 @@ class _EventFormDialogState extends State<EventFormDialog> {
                 maxLines: 3,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _dateController,
-                decoration: const InputDecoration(
-                  labelText: 'Date (YYYY-MM-DD)',
-                ),
+
+              // --- Chapter dropdown ---
+              DropdownButtonFormField<Chapter>(
+                value: _selectedChapter,
+                decoration: const InputDecoration(labelText: 'Chapter'),
+                items: Chapter.values.map((ch) {
+                  return DropdownMenuItem(
+                    value: ch,
+                    child: Text(ch.displayName),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _selectedChapter = value);
+                  }
+                },
               ),
               const SizedBox(height: 12),
+
+              // --- Date picker ---
+              TextFormField(
+                controller: _dateController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Date',
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2024),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) {
+                    _dateController.text = picked.toIso8601String().split(
+                      'T',
+                    )[0];
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+
+              // --- Start / End time row ---
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _startTimeController,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Start Time',
+                        suffixIcon: Icon(Icons.access_time),
+                      ),
+                      onTap: () => _pickTime(_startTimeController),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _endTimeController,
+                      readOnly: true,
+                      decoration: const InputDecoration(
+                        labelText: 'End Time',
+                        suffixIcon: Icon(Icons.access_time),
+                      ),
+                      onTap: () => _pickTime(_endTimeController),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
               TextFormField(
                 controller: _categoryController,
                 decoration: const InputDecoration(
-                  labelText: 'Category/Location',
+                  labelText: 'Category (e.g. Workshop, Seminar)',
                 ),
               ),
               const SizedBox(height: 12),
@@ -128,11 +209,22 @@ class _EventFormDialogState extends State<EventFormDialog> {
                 keyboardType: TextInputType.number,
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _levelController,
+
+              // --- Level dropdown ---
+              DropdownButtonFormField<String>(
+                value: _levels.contains(_levelController.text)
+                    ? _levelController.text
+                    : _levels.first,
                 decoration: const InputDecoration(labelText: 'Level'),
+                items: _levels
+                    .map((l) => DropdownMenuItem(value: l, child: Text(l)))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) _levelController.text = value;
+                },
               ),
               const SizedBox(height: 12),
+
               TextFormField(
                 controller: _speakerNameController,
                 decoration: const InputDecoration(labelText: 'Speaker Name'),
@@ -143,6 +235,30 @@ class _EventFormDialogState extends State<EventFormDialog> {
                 decoration: const InputDecoration(labelText: 'About Speaker'),
                 maxLines: 2,
               ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _prerequisitesController,
+                decoration: const InputDecoration(labelText: 'Prerequisites'),
+                maxLines: 2,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _linkedinController,
+                decoration: const InputDecoration(
+                  labelText: 'Speaker LinkedIn URL',
+                ),
+                keyboardType: TextInputType.url,
+              ),
+              const SizedBox(height: 12),
+
+              // --- isFeatured toggle ---
+              SwitchListTile(
+                title: const Text('Featured Event'),
+                value: _isFeatured,
+                onChanged: (value) => setState(() => _isFeatured = value),
+                contentPadding: EdgeInsets.zero,
+              ),
+
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -164,23 +280,69 @@ class _EventFormDialogState extends State<EventFormDialog> {
     );
   }
 
+  Future<void> _pickTime(TextEditingController controller) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      controller.text =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
   void _submitForm() {
+    final date = _dateController.text.trim(); // YYYY-MM-DD
+    final startTime = _startTimeController.text.trim(); // HH:mm
+    final endTime = _endTimeController.text.trim(); // HH:mm
+
+    // Validate required fields
+    if (date.isEmpty || startTime.isEmpty || endTime.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Date, Start Time, and End Time are required'),
+        ),
+      );
+      return;
+    }
+
+    if (_titleController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Title is required')));
+      return;
+    }
+
+    // Build proper ISO-8601 datetime strings: "YYYY-MM-DDTHH:mm:ss.sssZ"
+    final dateIso = '${date}T00:00:00.000Z';
+    final startTimeIso = '${date}T$startTime:00.000Z';
+    final endTimeIso = '${date}T$endTime:00.000Z';
+
+    // Debug: print the exact payload being sent
+    print('=== EVENT FORM SUBMIT ===');
+    print('date raw: "$date"');
+    print('startTime raw: "$startTime"');
+    print('endTime raw: "$endTime"');
+    print('dateIso: "$dateIso"');
+    print('startTimeIso: "$startTimeIso"');
+    print('endTimeIso: "$endTimeIso"');
+
     final eventData = {
-      'title': _titleController.text,
-      'description': _descriptionController.text,
-      'date': _dateController.text,
-      'startTime': _startTimeController.text,
-      'endTime': _endTimeController.text,
-      'category': _categoryController.text,
+      'title': _titleController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'date': dateIso,
+      'startTime': startTimeIso,
+      'endTime': endTimeIso,
+      'category': _categoryController.text.trim(),
       'attendeesNeeded': int.tryParse(_attendeesNeededController.text) ?? 0,
-      'level': _levelController.text,
-      'speakerFullName': _speakerNameController.text,
-      'aboutSpeaker': _speakerBioController.text,
-      'prerequisites': _prerequisitesController.text,
-      'speakerLinkedin': _linkedinController.text,
       'registrations': widget.event?.registrations ?? 0,
-      'isFeatured': widget.event?.isFeatured ?? false,
-      'chapter': widget.event?.chapter.displayName ?? 'CS',
+      'level': _levelController.text,
+      'chapter': _selectedChapter.displayName,
+      'isFeatured': _isFeatured,
+      'speakerFullName': _speakerNameController.text.trim(),
+      'aboutSpeaker': _speakerBioController.text.trim(),
+      'prerequisites': _prerequisitesController.text.trim(),
+      'speakerLinkedin': _linkedinController.text.trim(),
     };
     widget.onSubmit(eventData);
   }

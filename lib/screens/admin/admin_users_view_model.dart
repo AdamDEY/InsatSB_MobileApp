@@ -60,6 +60,23 @@ class AdminUsersViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> createUser(Map<String, dynamic> userData) async {
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final user = await _adminRepository.createUser(userData);
+      _users.add(user);
+      _setLoading(false);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _setError('Failed to create user: ${e.toString()}');
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<void> deleteUser(String userId) async {
     _setLoading(true);
     _clearError();
