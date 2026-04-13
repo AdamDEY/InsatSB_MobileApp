@@ -57,10 +57,6 @@ dependencies:
   shared_preferences: ^2.2.2
   shared_preferences_web: ^2.1.0
 
-  firebase_core: ^3.15.2
-  firebase_auth: ^5.7.0
-  cloud_firestore: ^5.4.3
-
 dev_dependencies:
   flutter_test:
     sdk: flutter

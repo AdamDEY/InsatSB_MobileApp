@@ -5,7 +5,7 @@ class AdminDashboardViewModel extends ChangeNotifier {
   final AdminRepository _adminRepository;
 
   int _totalUsers = 0;
-  int _totalEvents = 0;
+  final int _totalEvents = 0;
   bool _isLoading = false;
   String? _errorMessage;
 

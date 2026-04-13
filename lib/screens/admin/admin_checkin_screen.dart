@@ -134,6 +134,24 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
     final result = _lastResult!;
     final isError = result['error'] == true;
     final alreadyCheckedIn = result['alreadyCheckedIn'] == true;
+    final checkinWindow = result['checkinWindow'] as Map<String, dynamic>?;
+    final windowStatus = checkinWindow?['status']?.toString();
+
+    final String timingText;
+    final Color timingColor;
+    if (windowStatus == 'too_early') {
+      timingText = 'Too Early';
+      timingColor = Colors.orange;
+    } else if (windowStatus == 'too_late') {
+      timingText = 'Too Late';
+      timingColor = Colors.red;
+    } else if (windowStatus == 'on_time') {
+      timingText = 'On Time';
+      timingColor = Colors.green;
+    } else {
+      timingText = 'Window Unavailable';
+      timingColor = Colors.blueGrey;
+    }
 
     final Color statusColor;
     final IconData statusIcon;
@@ -210,6 +228,39 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
                       'Event',
                       result['event']?['title'] ?? 'Unknown',
                     ),
+                    if (checkinWindow != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.schedule,
+                        'Timing Status',
+                        timingText,
+                        valueColor: timingColor,
+                      ),
+                    ],
+                    if (result['event']?['startTime'] != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.play_arrow,
+                        'Event Starts',
+                        _formatDateTime(result['event']['startTime']),
+                      ),
+                    ],
+                    if (result['event']?['endTime'] != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.stop,
+                        'Event Ends',
+                        _formatDateTime(result['event']['endTime']),
+                      ),
+                    ],
+                    if (result['serverTime'] != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.access_time_filled,
+                        'Server Time',
+                        _formatDateTime(result['serverTime']),
+                      ),
+                    ],
                     if (result['checkedInAt'] != null) ...[
                       const SizedBox(height: 12),
                       _buildDetailRow(
@@ -230,10 +281,33 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
                   color: Colors.red.shade50,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text(
-                  result['message'] ?? 'Unknown error',
-                  style: TextStyle(fontSize: 16, color: Colors.red.shade800),
-                  textAlign: TextAlign.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      result['message'] ?? 'Unknown error',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.red.shade800,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    if (result['event']?['startTime'] != null ||
+                        result['event']?['endTime'] != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        'Event window: '
+                        '${result['event']?['startTime'] != null ? _formatDateTime(result['event']['startTime']) : 'Unknown'}'
+                        ' - '
+                        '${result['event']?['endTime'] != null ? _formatDateTime(result['event']['endTime']) : 'Unknown'}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.red.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ],
                 ),
               ),
 
@@ -265,7 +339,12 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Row(
       children: [
         Icon(icon, size: 20, color: Colors.grey[600]),
@@ -284,9 +363,10 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
               ),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
+                  color: valueColor,
                 ),
               ),
             ],

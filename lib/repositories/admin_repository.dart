@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import '../models/event.dart';
 import '../models/user.dart';
 import '../services/api_client.dart';
@@ -105,9 +107,29 @@ class AdminRepositoryImpl implements AdminRepository {
   // Check-in
   @override
   Future<Map<String, dynamic>> verifyCheckin(String token) async {
-    final response = await _apiClient.postJson('/api/events/check-in', {
-      'token': token,
-    });
-    return response;
+    try {
+      final response = await _apiClient.postJson('/api/events/check-in', {
+        'token': token,
+      });
+      return response;
+    } on ApiException catch (e) {
+      String message = e.message;
+
+      try {
+        final decoded = jsonDecode(e.message);
+        if (decoded is Map<String, dynamic>) {
+          final rawMessage = decoded['message'];
+          if (rawMessage is String) {
+            message = rawMessage;
+          } else if (rawMessage is List && rawMessage.isNotEmpty) {
+            message = rawMessage.first.toString();
+          }
+        }
+      } catch (_) {
+        // Keep original message when body is not JSON.
+      }
+
+      throw Exception(message);
+    }
   }
 }
