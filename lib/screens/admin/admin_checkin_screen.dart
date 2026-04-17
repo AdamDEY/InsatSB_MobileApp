@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:provider/provider.dart';
+
 import '../../repositories/admin_repository.dart';
+
+enum AttendanceScanMode { checkin, checkout }
 
 class AdminCheckinScreen extends StatefulWidget {
   const AdminCheckinScreen({super.key});
@@ -12,8 +15,10 @@ class AdminCheckinScreen extends StatefulWidget {
 
 class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
   final MobileScannerController _scannerController = MobileScannerController();
+
   bool _isProcessing = false;
   Map<String, dynamic>? _lastResult;
+  AttendanceScanMode _scanMode = AttendanceScanMode.checkin;
 
   @override
   void dispose() {
@@ -34,18 +39,21 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
       _lastResult = null;
     });
 
-    // Pause scanner while processing
-    _scannerController.stop();
+    final adminRepository = context.read<AdminRepository>();
+    await _scannerController.stop();
 
     try {
-      final adminRepository = context.read<AdminRepository>();
-      final result = await adminRepository.verifyCheckin(token);
+      final result = _scanMode == AttendanceScanMode.checkin
+          ? await adminRepository.verifyCheckin(token)
+          : await adminRepository.verifyCheckout(token);
 
+      if (!mounted) return;
       setState(() {
         _lastResult = result;
         _isProcessing = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _lastResult = {'error': true, 'message': e.toString()};
         _isProcessing = false;
@@ -53,17 +61,31 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
     }
   }
 
-  void _resumeScanning() {
+  Future<void> _resumeScanning() async {
     setState(() {
       _lastResult = null;
     });
-    _scannerController.start();
+    await _scannerController.start();
+  }
+
+  void _switchMode(AttendanceScanMode mode) {
+    if (_scanMode == mode) return;
+
+    setState(() {
+      _scanMode = mode;
+      _lastResult = null;
+      _isProcessing = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final title = _scanMode == AttendanceScanMode.checkin
+        ? 'Event Check-in Scanner'
+        : 'Event Check-out Scanner';
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Event Check-in Scanner'), elevation: 0),
+      appBar: AppBar(title: Text(title), elevation: 0),
       body: _lastResult != null ? _buildResultView() : _buildScannerView(),
     );
   }
@@ -75,7 +97,30 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
           controller: _scannerController,
           onDetect: _onBarcodeDetected,
         ),
-        // Overlay with scanning frame
+        Positioned(
+          top: 24,
+          left: 16,
+          right: 16,
+          child: Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('Check-in Mode'),
+                  selected: _scanMode == AttendanceScanMode.checkin,
+                  onSelected: (_) => _switchMode(AttendanceScanMode.checkin),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('Check-out Mode'),
+                  selected: _scanMode == AttendanceScanMode.checkout,
+                  onSelected: (_) => _switchMode(AttendanceScanMode.checkout),
+                ),
+              ),
+            ],
+          ),
+        ),
         Center(
           child: Container(
             width: 280,
@@ -86,7 +131,6 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
             ),
           ),
         ),
-        // Instructions
         Positioned(
           bottom: 80,
           left: 0,
@@ -98,9 +142,11 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Text(
-                'Point camera at attendee\'s QR code',
-                style: TextStyle(
+              child: Text(
+                _scanMode == AttendanceScanMode.checkin
+                    ? 'Point camera at attendee\'s QR code to check in'
+                    : 'Point camera at attendee\'s QR code to check out',
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -134,6 +180,7 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
     final result = _lastResult!;
     final isError = result['error'] == true;
     final alreadyCheckedIn = result['alreadyCheckedIn'] == true;
+    final alreadyCheckedOut = result['alreadyCheckedOut'] == true;
     final checkinWindow = result['checkinWindow'] as Map<String, dynamic>?;
     final windowStatus = checkinWindow?['status']?.toString();
 
@@ -153,35 +200,41 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
       timingColor = Colors.blueGrey;
     }
 
-    final Color statusColor;
-    final IconData statusIcon;
-    final String statusText;
+    late final Color statusColor;
+    late final IconData statusIcon;
+    late final String statusText;
 
     if (isError) {
       statusColor = Colors.red;
       statusIcon = Icons.error_outline;
-      statusText = 'Check-in Failed';
-    } else if (alreadyCheckedIn) {
+      statusText = _scanMode == AttendanceScanMode.checkin
+          ? 'Check-in Failed'
+          : 'Check-out Failed';
+    } else if (_scanMode == AttendanceScanMode.checkin && alreadyCheckedIn) {
       statusColor = Colors.orange;
       statusIcon = Icons.warning_amber_rounded;
       statusText = 'Already Checked In';
+    } else if
+        (_scanMode == AttendanceScanMode.checkout && alreadyCheckedOut) {
+      statusColor = Colors.orange;
+      statusIcon = Icons.warning_amber_rounded;
+      statusText = 'Already Checked Out';
     } else {
       statusColor = Colors.green;
       statusIcon = Icons.check_circle_outline;
-      statusText = 'Check-in Successful';
+      statusText = _scanMode == AttendanceScanMode.checkin
+          ? 'Check-in Successful'
+          : 'Check-out Successful';
     }
 
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Status icon
             Icon(statusIcon, size: 100, color: statusColor),
             const SizedBox(height: 24),
-
-            // Status text
             Text(
               statusText,
               style: TextStyle(
@@ -191,8 +244,6 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
-            // Details card
             if (!isError)
               Container(
                 width: double.infinity,
@@ -214,19 +265,19 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
                     _buildDetailRow(
                       Icons.person,
                       'Name',
-                      result['user']?['fullName'] ?? 'Unknown',
+                      result['user']?['fullName']?.toString() ?? 'Unknown',
                     ),
                     const SizedBox(height: 12),
                     _buildDetailRow(
                       Icons.email,
                       'Email',
-                      result['user']?['email'] ?? 'Unknown',
+                      result['user']?['email']?.toString() ?? 'Unknown',
                     ),
                     const SizedBox(height: 12),
                     _buildDetailRow(
                       Icons.event,
                       'Event',
-                      result['event']?['title'] ?? 'Unknown',
+                      result['event']?['title']?.toString() ?? 'Unknown',
                     ),
                     if (checkinWindow != null) ...[
                       const SizedBox(height: 12),
@@ -264,15 +315,22 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
                     if (result['checkedInAt'] != null) ...[
                       const SizedBox(height: 12),
                       _buildDetailRow(
-                        Icons.access_time,
+                        Icons.login,
                         'Checked In At',
                         _formatDateTime(result['checkedInAt']),
+                      ),
+                    ],
+                    if (result['checkedOutAt'] != null) ...[
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.logout,
+                        'Checked Out At',
+                        _formatDateTime(result['checkedOutAt']),
                       ),
                     ],
                   ],
                 ),
               ),
-
             if (isError)
               Container(
                 width: double.infinity,
@@ -281,39 +339,16 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
                   color: Colors.red.shade50,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      result['message'] ?? 'Unknown error',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.red.shade800,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (result['event']?['startTime'] != null ||
-                        result['event']?['endTime'] != null) ...[
-                      const SizedBox(height: 10),
-                      Text(
-                        'Event window: '
-                        '${result['event']?['startTime'] != null ? _formatDateTime(result['event']['startTime']) : 'Unknown'}'
-                        ' - '
-                        '${result['event']?['endTime'] != null ? _formatDateTime(result['event']['endTime']) : 'Unknown'}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.red.shade700,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ],
+                child: Text(
+                  result['message']?.toString() ?? 'Unknown error',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.red.shade800,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ),
-
             const SizedBox(height: 32),
-
-            // Scan another button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -324,7 +359,9 @@ class _AdminCheckinScreenState extends State<AdminCheckinScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8B5CF6),
+                  backgroundColor: _scanMode == AttendanceScanMode.checkin
+                      ? const Color(0xFF0EA5E9)
+                      : const Color(0xFF10B981),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

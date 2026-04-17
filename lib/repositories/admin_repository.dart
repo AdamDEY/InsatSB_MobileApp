@@ -23,6 +23,7 @@ abstract class AdminRepository {
 
   // Check-in
   Future<Map<String, dynamic>> verifyCheckin(String token);
+  Future<Map<String, dynamic>> verifyCheckout(String token);
 }
 
 class AdminRepositoryImpl implements AdminRepository {
@@ -105,6 +106,26 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   // Check-in
+  String _extractApiErrorMessage(ApiException e) {
+    String message = e.message;
+
+    try {
+      final decoded = jsonDecode(e.message);
+      if (decoded is Map<String, dynamic>) {
+        final rawMessage = decoded['message'];
+        if (rawMessage is String) {
+          message = rawMessage;
+        } else if (rawMessage is List && rawMessage.isNotEmpty) {
+          message = rawMessage.first.toString();
+        }
+      }
+    } catch (_) {
+      // Keep original message when body is not JSON.
+    }
+
+    return message;
+  }
+
   @override
   Future<Map<String, dynamic>> verifyCheckin(String token) async {
     try {
@@ -113,23 +134,19 @@ class AdminRepositoryImpl implements AdminRepository {
       });
       return response;
     } on ApiException catch (e) {
-      String message = e.message;
+      throw Exception(_extractApiErrorMessage(e));
+    }
+  }
 
-      try {
-        final decoded = jsonDecode(e.message);
-        if (decoded is Map<String, dynamic>) {
-          final rawMessage = decoded['message'];
-          if (rawMessage is String) {
-            message = rawMessage;
-          } else if (rawMessage is List && rawMessage.isNotEmpty) {
-            message = rawMessage.first.toString();
-          }
-        }
-      } catch (_) {
-        // Keep original message when body is not JSON.
-      }
-
-      throw Exception(message);
+  @override
+  Future<Map<String, dynamic>> verifyCheckout(String token) async {
+    try {
+      final response = await _apiClient.postJson('/api/events/check-out', {
+        'token': token,
+      });
+      return response;
+    } on ApiException catch (e) {
+      throw Exception(_extractApiErrorMessage(e));
     }
   }
 }
