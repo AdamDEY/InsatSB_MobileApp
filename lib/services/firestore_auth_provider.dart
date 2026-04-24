@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../models/user.dart';
 import 'api_client.dart';
 
@@ -113,8 +117,32 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       notifyListeners();
       return true;
+    } on ApiException catch (e) {
+      final backendMessage = _extractApiErrorMessage(e.message);
+      if (e.statusCode == 400 || e.statusCode == 401 || e.statusCode == 404) {
+        _setError(backendMessage ?? 'Invalid credentials. Please try again.');
+      } else {
+        _setError(
+          backendMessage ??
+              'Server error (${e.statusCode}). Please try again in a moment.',
+        );
+      }
+      _setLoading(false);
+      return false;
+    } on TimeoutException {
+      _setError('Request timed out. Check backend connectivity and try again.');
+      _setLoading(false);
+      return false;
+    } on http.ClientException {
+      _setError(
+        'Cannot reach backend API. Verify API_BASE_URL and server status.',
+      );
+      _setLoading(false);
+      return false;
     } catch (e) {
-      _setError('Login failed. Please check your credentials.');
+      _setError(
+        'Login failed. ${_extractApiErrorMessage(e.toString()) ?? 'Please try again.'}',
+      );
       _setLoading(false);
       return false;
     }
@@ -155,8 +183,32 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       notifyListeners();
       return true;
+    } on ApiException catch (e) {
+      final backendMessage = _extractApiErrorMessage(e.message);
+      if (e.statusCode == 400 || e.statusCode == 409) {
+        _setError(backendMessage ?? 'Registration failed.');
+      } else {
+        _setError(
+          backendMessage ??
+              'Server error (${e.statusCode}). Please try again in a moment.',
+        );
+      }
+      _setLoading(false);
+      return false;
+    } on TimeoutException {
+      _setError('Request timed out. Check backend connectivity and try again.');
+      _setLoading(false);
+      return false;
+    } on http.ClientException {
+      _setError(
+        'Cannot reach backend API. Verify API_BASE_URL and server status.',
+      );
+      _setLoading(false);
+      return false;
     } catch (e) {
-      _setError('Registration failed. Please try again.');
+      _setError(
+        'Registration failed. ${_extractApiErrorMessage(e.toString()) ?? 'Please try again.'}',
+      );
       _setLoading(false);
       return false;
     }
@@ -226,5 +278,28 @@ class AuthProvider extends ChangeNotifier {
 
   void clearError() {
     _clearError();
+  }
+
+  String? _extractApiErrorMessage(String rawMessage) {
+    if (rawMessage.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(rawMessage);
+      if (decoded is Map<String, dynamic>) {
+        final message = decoded['message'];
+        if (message is String && message.trim().isNotEmpty) {
+          return message;
+        }
+        if (message is List && message.isNotEmpty) {
+          return message.join(', ');
+        }
+      }
+    } catch (_) {
+      // Keep fallback below when rawMessage is not JSON.
+    }
+
+    return rawMessage;
   }
 }
