@@ -126,7 +126,7 @@ class _EventFormDialogState extends State<EventFormDialog> {
 
               // --- Chapter dropdown ---
               DropdownButtonFormField<Chapter>(
-                value: _selectedChapter,
+                initialValue: _selectedChapter,
                 decoration: const InputDecoration(labelText: 'Chapter'),
                 items: Chapter.values.map((ch) {
                   return DropdownMenuItem(
@@ -212,7 +212,7 @@ class _EventFormDialogState extends State<EventFormDialog> {
 
               // --- Level dropdown ---
               DropdownButtonFormField<String>(
-                value: _levels.contains(_levelController.text)
+                initialValue: _levels.contains(_levelController.text)
                     ? _levelController.text
                     : _levels.first,
                 decoration: const InputDecoration(labelText: 'Level'),
