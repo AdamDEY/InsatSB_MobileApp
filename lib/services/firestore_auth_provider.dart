@@ -130,12 +130,14 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return false;
     } on TimeoutException {
-      _setError('Request timed out. Check backend connectivity and try again.');
+      _setError(
+        'Request timed out while reaching ${_apiClient.baseUrl}. Check backend connectivity and try again.',
+      );
       _setLoading(false);
       return false;
     } on http.ClientException {
       _setError(
-        'Cannot reach backend API. Verify API_BASE_URL and server status.',
+        'Cannot reach backend API at ${_apiClient.baseUrl}. Verify API_BASE_URL and server status.',
       );
       _setLoading(false);
       return false;
@@ -196,12 +198,14 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return false;
     } on TimeoutException {
-      _setError('Request timed out. Check backend connectivity and try again.');
+      _setError(
+        'Request timed out while reaching ${_apiClient.baseUrl}. Check backend connectivity and try again.',
+      );
       _setLoading(false);
       return false;
     } on http.ClientException {
       _setError(
-        'Cannot reach backend API. Verify API_BASE_URL and server status.',
+        'Cannot reach backend API at ${_apiClient.baseUrl}. Verify API_BASE_URL and server status.',
       );
       _setLoading(false);
       return false;

@@ -4,7 +4,7 @@ import '../../repositories/event_repository.dart';
 
 class CalendarViewModel extends ChangeNotifier {
   final EventRepository _eventRepository;
-  
+
   CalendarViewModel(this._eventRepository);
 
   List<Event> _events = [];
@@ -27,7 +27,7 @@ class CalendarViewModel extends ChangeNotifier {
   Future<void> loadEvents() async {
     _setLoading(true);
     _error = null;
-    
+
     try {
       _events = await _eventRepository.getEvents();
     } catch (e) {
@@ -41,8 +41,8 @@ class CalendarViewModel extends ChangeNotifier {
   List<Event> getEventsForDate(DateTime date) {
     return _events.where((event) {
       return event.date.year == date.year &&
-             event.date.month == date.month &&
-             event.date.day == date.day;
+          event.date.month == date.month &&
+          event.date.day == date.day;
     }).toList();
   }
 
@@ -65,14 +65,12 @@ class CalendarViewModel extends ChangeNotifier {
   // Toggle favorite status of an event
   Future<void> toggleFavorite(String eventId) async {
     try {
-      await _eventRepository.toggleFavorite(eventId);
-      
+      final isFavorite = await _eventRepository.toggleFavorite(eventId);
+
       // Update local state
       final index = _events.indexWhere((event) => event.id == eventId);
       if (index != -1) {
-        _events[index] = _events[index].copyWith(
-          isFavorite: !_events[index].isFavorite,
-        );
+        _events[index] = _events[index].copyWith(isFavorite: isFavorite);
         notifyListeners();
       }
     } catch (e) {

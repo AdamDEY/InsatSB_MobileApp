@@ -98,14 +98,12 @@ class HomeViewModel extends ChangeNotifier {
   // Toggle favorite status of an event
   Future<void> toggleFavorite(String eventId) async {
     try {
-      await _eventRepository.toggleFavorite(eventId);
+      final isFavorite = await _eventRepository.toggleFavorite(eventId);
 
       // Update local state
       final index = _events.indexWhere((event) => event.id == eventId);
       if (index != -1) {
-        _events[index] = _events[index].copyWith(
-          isFavorite: !_events[index].isFavorite,
-        );
+        _events[index] = _events[index].copyWith(isFavorite: isFavorite);
         notifyListeners();
       }
     } catch (e) {

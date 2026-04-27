@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/event.dart';
 import '../services/api_client.dart';
 
@@ -8,11 +7,11 @@ abstract class EventRepository {
   Future<List<Event>> getEventsByCategory(String category);
   Future<List<Event>> getEventsByChapter(String chapter);
   Future<Event> getEventById(String id);
-  Future<void> toggleFavorite(String eventId);
+  Future<List<Event>> getFavoriteEvents();
+  Future<bool> toggleFavorite(String eventId);
   Future<RegistrationResult> registerForEvent(String eventId);
   Future<bool> unregisterFromEvent(String eventId);
   Future<String?> getCheckinToken(String eventId);
-  Set<String> get favoriteEventIds;
 }
 
 class RegistrationResult {
@@ -27,57 +26,49 @@ class EventRepositoryImpl implements EventRepository {
   EventRepositoryImpl(this._apiClient);
 
   final ApiClient _apiClient;
-  final Set<String> _favoriteEventIds = <String>{};
-  bool _favoritesLoaded = false;
-
-  static const String _favoritesKey = 'favorite_event_ids';
-
-  @override
-  Set<String> get favoriteEventIds => _favoriteEventIds;
-
-  /// Load favorites from SharedPreferences (called lazily on first access)
-  Future<void> _ensureFavoritesLoaded() async {
-    if (_favoritesLoaded) return;
-    final prefs = await SharedPreferences.getInstance();
-    final saved = prefs.getStringList(_favoritesKey);
-    if (saved != null) {
-      _favoriteEventIds.addAll(saved);
-    }
-    _favoritesLoaded = true;
-  }
-
-  /// Save favorites to SharedPreferences
-  Future<void> _saveFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_favoritesKey, _favoriteEventIds.toList());
-  }
-
-  /// Apply favorite status to a list of events based on _favoriteEventIds
-  List<Event> _applyFavoriteStatus(List<Event> events) {
+  List<Event> _applyFavoriteStatus(
+    List<Event> events,
+    Set<String> favoriteEventIds,
+  ) {
     return events.map((event) {
-      final isFav = _favoriteEventIds.contains(event.id);
+      final isFav = favoriteEventIds.contains(event.id);
       return event.copyWith(isFavorite: isFav);
     }).toList();
+  }
+
+  Future<Set<String>> _fetchFavoriteEventIds() async {
+    final favoritesResponse = await _apiClient.getList(
+      '/api/events/me/favorites',
+    );
+    return favoritesResponse
+        .map((item) => (item as Map<String, dynamic>)['id'].toString())
+        .toSet();
   }
 
   @override
   Future<List<Event>> getEvents() async {
     try {
-      await _ensureFavoritesLoaded();
-
-      // Fetch events and registrations in parallel
+      // Fetch events, registrations, and user favorites in parallel.
       final results = await Future.wait([
         _apiClient.getList('/api/events'),
         _apiClient
             .getList('/api/events/me/registrations')
             .catchError((_) => <dynamic>[]),
+        _apiClient
+            .getList('/api/events/me/favorites')
+            .catchError((_) => <dynamic>[]),
       ]);
 
       final response = results[0];
       final registrationsResponse = results[1];
+      final favoritesResponse = results[2];
 
       final registeredEventIds = registrationsResponse
           .map((reg) => reg['id'].toString())
+          .toSet();
+
+      final favoriteEventIds = favoritesResponse
+          .map((item) => (item as Map<String, dynamic>)['id'].toString())
           .toSet();
 
       // Map events and set isRegistered based on user's registrations
@@ -88,8 +79,7 @@ class EventRepositoryImpl implements EventRepository {
         return event.copyWith(isRegistered: isUserRegistered);
       }).toList();
 
-      // Apply favorite status from local storage
-      return _applyFavoriteStatus(events);
+      return _applyFavoriteStatus(events, favoriteEventIds);
     } catch (e) {
       rethrow;
     }
@@ -113,36 +103,72 @@ class EventRepositoryImpl implements EventRepository {
 
   @override
   Future<Event> getEventById(String id) async {
-    await _ensureFavoritesLoaded();
     final data = await _apiClient.getJson('/api/events/$id');
     final event = Event.fromJson(data);
 
-    // Check if user is registered for this event
+    // Check registration and favorite flags for this user.
     try {
-      final registrationsResponse = await _apiClient.getList(
-        '/api/events/me/registrations',
-      );
+      final results = await Future.wait([
+        _apiClient
+            .getList('/api/events/me/registrations')
+            .catchError((_) => <dynamic>[]),
+        _apiClient
+            .getList('/api/events/me/favorites')
+            .catchError((_) => <dynamic>[]),
+      ]);
+
+      final registrationsResponse = results[0];
+      final favoritesResponse = results[1];
+
       final registeredEventIds = registrationsResponse
           .map((reg) => reg['id'].toString())
           .toSet();
+
+      final favoriteEventIds = favoritesResponse
+          .map((item) => (item as Map<String, dynamic>)['id'].toString())
+          .toSet();
+
       return event.copyWith(
         isRegistered: registeredEventIds.contains(event.id),
-        isFavorite: _favoriteEventIds.contains(event.id),
+        isFavorite: favoriteEventIds.contains(event.id),
       );
     } catch (_) {
-      return event.copyWith(isFavorite: _favoriteEventIds.contains(event.id));
+      return event;
     }
   }
 
   @override
-  Future<void> toggleFavorite(String eventId) async {
-    await _ensureFavoritesLoaded();
-    if (_favoriteEventIds.contains(eventId)) {
-      _favoriteEventIds.remove(eventId);
-    } else {
-      _favoriteEventIds.add(eventId);
+  Future<List<Event>> getFavoriteEvents() async {
+    final response = await _apiClient.getList('/api/events/me/favorites');
+    final favoriteEvents = response
+        .map((item) => Event.fromJson(item as Map<String, dynamic>))
+        .map((event) => event.copyWith(isFavorite: true))
+        .toList();
+    return favoriteEvents;
+  }
+
+  @override
+  Future<bool> toggleFavorite(String eventId) async {
+    final favoriteEventIds = await _fetchFavoriteEventIds();
+    final isFavorite = favoriteEventIds.contains(eventId);
+
+    if (isFavorite) {
+      await _apiClient.delete('/api/events/$eventId/favorite');
+      return false;
     }
-    await _saveFavorites();
+
+    try {
+      await _apiClient.postJson(
+        '/api/events/$eventId/favorite',
+        <String, dynamic>{},
+      );
+      return true;
+    } on ApiException catch (e) {
+      if (e.statusCode == 409) {
+        return true;
+      }
+      rethrow;
+    }
   }
 
   @override

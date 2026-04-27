@@ -38,8 +38,8 @@ class EventDetailsViewModel extends ChangeNotifier {
     if (_event == null) return;
 
     try {
-      await _eventRepository.toggleFavorite(_event!.id);
-      _event = _event!.copyWith(isFavorite: !_event!.isFavorite);
+      final isFavorite = await _eventRepository.toggleFavorite(_event!.id);
+      _event = _event!.copyWith(isFavorite: isFavorite);
       notifyListeners();
     } catch (e) {
       _error = e.toString();

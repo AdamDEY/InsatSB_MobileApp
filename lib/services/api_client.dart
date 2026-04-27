@@ -1,17 +1,23 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'api_config.dart';
 
 class ApiClient {
   static const String _tokenKey = 'jwt_token';
   static const String _userKey = 'user_data';
+  static const String _baseUrlKey = 'api_base_url';
 
-  ApiClient({required this.baseUrl, http.Client? httpClient})
-    : _httpClient = httpClient ?? http.Client();
+  ApiClient({required String baseUrl, http.Client? httpClient})
+    : _baseUrl = _normalizeBaseUrl(baseUrl),
+      _httpClient = httpClient ?? http.Client();
 
-  final String baseUrl;
+  String _baseUrl;
   final http.Client _httpClient;
   String? _token;
+
+  String get baseUrl => _baseUrl;
 
   /// Request timeout duration
   static const Duration _timeout = Duration(seconds: 15);
@@ -20,6 +26,10 @@ class ApiClient {
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     _token = prefs.getString(_tokenKey);
+    final savedBaseUrl = prefs.getString(_baseUrlKey);
+    if (savedBaseUrl != null && savedBaseUrl.trim().isNotEmpty) {
+      _baseUrl = _normalizeBaseUrl(savedBaseUrl);
+    }
   }
 
   /// Set token and persist to SharedPreferences
@@ -82,54 +92,127 @@ class ApiClient {
   }
 
   Future<Map<String, dynamic>> getJson(String path) async {
-    final response = await _httpClient
-        .get(Uri.parse('$baseUrl$path'), headers: _headers())
-        .timeout(_timeout);
-    return _decodeJson(response);
+    return _requestWithFailover((baseUrl) async {
+      final response = await _httpClient
+          .get(Uri.parse('$baseUrl$path'), headers: _headers())
+          .timeout(_timeout);
+      return _decodeJson(response);
+    });
   }
 
   Future<List<dynamic>> getList(String path) async {
-    final response = await _httpClient
-        .get(Uri.parse('$baseUrl$path'), headers: _headers())
-        .timeout(_timeout);
-    return _decodeList(response);
+    return _requestWithFailover((baseUrl) async {
+      final response = await _httpClient
+          .get(Uri.parse('$baseUrl$path'), headers: _headers())
+          .timeout(_timeout);
+      return _decodeList(response);
+    });
   }
 
   Future<Map<String, dynamic>> postJson(
     String path,
     Map<String, dynamic> body,
   ) async {
-    final response = await _httpClient
-        .post(
-          Uri.parse('$baseUrl$path'),
-          headers: _headers(),
-          body: jsonEncode(body),
-        )
-        .timeout(_timeout);
-    return _decodeJson(response);
+    return _requestWithFailover((baseUrl) async {
+      final response = await _httpClient
+          .post(
+            Uri.parse('$baseUrl$path'),
+            headers: _headers(),
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
+      return _decodeJson(response);
+    });
   }
 
   Future<Map<String, dynamic>> putJson(
     String path,
     Map<String, dynamic> body,
   ) async {
-    final response = await _httpClient
-        .put(
-          Uri.parse('$baseUrl$path'),
-          headers: _headers(),
-          body: jsonEncode(body),
-        )
-        .timeout(_timeout);
-    return _decodeJson(response);
+    return _requestWithFailover((baseUrl) async {
+      final response = await _httpClient
+          .put(
+            Uri.parse('$baseUrl$path'),
+            headers: _headers(),
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
+      return _decodeJson(response);
+    });
   }
 
   Future<void> delete(String path) async {
-    final response = await _httpClient
-        .delete(Uri.parse('$baseUrl$path'), headers: _headers())
-        .timeout(_timeout);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw ApiException(response.statusCode, response.body);
+    await _requestWithFailover((baseUrl) async {
+      final response = await _httpClient
+          .delete(Uri.parse('$baseUrl$path'), headers: _headers())
+          .timeout(_timeout);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(response.statusCode, response.body);
+      }
+    });
+  }
+
+  Future<T> _requestWithFailover<T>(
+    Future<T> Function(String baseUrl) operation,
+  ) async {
+    final candidates = _buildCandidateBaseUrls();
+
+    Object? lastConnectivityError;
+    StackTrace? lastConnectivityStackTrace;
+
+    for (final candidate in candidates) {
+      try {
+        final result = await operation(candidate);
+        if (candidate != _baseUrl) {
+          _baseUrl = candidate;
+          await _persistBaseUrl(candidate);
+        }
+        return result;
+      } on TimeoutException catch (e, st) {
+        lastConnectivityError = e;
+        lastConnectivityStackTrace = st;
+      } on http.ClientException catch (e, st) {
+        lastConnectivityError = e;
+        lastConnectivityStackTrace = st;
+      }
     }
+
+    if (lastConnectivityError != null) {
+      Error.throwWithStackTrace(
+        lastConnectivityError,
+        lastConnectivityStackTrace ?? StackTrace.current,
+      );
+    }
+
+    throw TimeoutException('No reachable backend base URL candidate.');
+  }
+
+  List<String> _buildCandidateBaseUrls() {
+    final result = <String>[];
+    final seen = <String>{};
+
+    void addCandidate(String value) {
+      final normalized = _normalizeBaseUrl(value);
+      if (normalized.isNotEmpty && seen.add(normalized)) {
+        result.add(normalized);
+      }
+    }
+
+    addCandidate(_baseUrl);
+    for (final candidate in ApiConfig.candidateBaseUrls) {
+      addCandidate(candidate);
+    }
+
+    return result;
+  }
+
+  Future<void> _persistBaseUrl(String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_baseUrlKey, _normalizeBaseUrl(value));
+  }
+
+  static String _normalizeBaseUrl(String value) {
+    return value.trim().replaceAll(RegExp(r'/+$'), '');
   }
 
   Map<String, dynamic> _decodeJson(http.Response response) {
