@@ -16,7 +16,7 @@ class EventCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: onCardPressed,
       child: Container(
@@ -25,9 +25,9 @@ class EventCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: isDark 
-                ? Colors.black.withValues(alpha: 0.3)
-                : Colors.black.withValues(alpha: 0.1),
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.black.withValues(alpha: 0.1),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -43,7 +43,7 @@ class EventCard extends StatelessWidget {
 
   Widget _buildFeaturedCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       height: 160,
       decoration: BoxDecoration(
@@ -57,17 +57,9 @@ class EventCard extends StatelessWidget {
       child: Stack(
         children: [
           // Category tag
-          Positioned(
-            top: 16,
-            left: 16,
-            child: _buildCategoryTag(),
-          ),
+          Positioned(top: 16, left: 16, child: _buildCategoryTag()),
           // Favorite button
-          Positioned(
-            top: 16,
-            right: 16,
-            child: _buildFavoriteButton(context),
-          ),
+          Positioned(top: 16, right: 16, child: _buildFavoriteButton(context)),
           // Event details
           Positioned(
             bottom: 0,
@@ -85,7 +77,7 @@ class EventCard extends StatelessWidget {
 
   Widget _buildEventDetails(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -185,12 +177,14 @@ class EventCard extends StatelessWidget {
         return const Color(0xFFFCD34D); // Yellow
       case Chapter.wie:
         return const Color(0xFF8B5CF6); // Purple
+      case Chapter.embs:
+        return const Color(0xFF06B6D4); // Cyan
     }
   }
 
   Widget _buildFavoriteButton(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: onFavoritePressed,
       child: Container(
@@ -201,7 +195,9 @@ class EventCard extends StatelessWidget {
         ),
         child: Icon(
           event.isFavorite ? Icons.favorite : Icons.favorite_border,
-          color: event.isFavorite ? Colors.red : (isDark ? Colors.grey[400] : Colors.grey[600]),
+          color: event.isFavorite
+              ? Colors.red
+              : (isDark ? Colors.grey[400] : Colors.grey[600]),
           size: 20,
         ),
       ),
@@ -210,8 +206,18 @@ class EventCard extends StatelessWidget {
 
   String _formatDate(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }
@@ -224,4 +230,3 @@ class EventCard extends StatelessWidget {
     return '$displayHour:$minute $period';
   }
 }
-

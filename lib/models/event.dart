@@ -4,19 +4,24 @@ enum Chapter {
   pesPels('PES/PELS'),
   ias('IAS'),
   sight('SIGHT'),
-  wie('WIE');
+  wie('WIE'),
+  embs('EMBS');
 
   const Chapter(this.displayName);
   final String displayName;
 
-  static Chapter fromString(String value) {
+  /// Parse a chapter string from the API. Returns null if the value is
+  /// empty, 'null', or not recognised — callers should handle the null case.
+  static Chapter? tryFromString(String? value) {
+    if (value == null || value.isEmpty || value == 'null') return null;
     switch (value.toLowerCase()) {
       case 'cs':
         return Chapter.cs;
       case 'ras':
         return Chapter.ras;
       case 'pes/pels':
-      case 'pesxpels':
+      case 'pespels':
+      case 'pes_pels':
         return Chapter.pesPels;
       case 'ias':
         return Chapter.ias;
@@ -24,9 +29,15 @@ enum Chapter {
         return Chapter.sight;
       case 'wie':
         return Chapter.wie;
+      case 'embs':
+        return Chapter.embs;
       default:
-        throw ArgumentError('Invalid chapter: $value');
+        return null;
     }
+  }
+
+  static Chapter fromString(String value) {
+    return tryFromString(value) ?? Chapter.cs;
   }
 }
 
@@ -73,25 +84,78 @@ class Event {
 
   factory Event.fromJson(Map<String, dynamic> json) {
     return Event(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      date: DateTime.parse(json['date'] ?? DateTime.now().toIso8601String()),
-      startTime: DateTime.parse(json['startTime'] ?? DateTime.now().toIso8601String()),
-      endTime: DateTime.parse(json['endTime'] ?? DateTime.now().toIso8601String()),
-      category: json['category'] ?? '',
-      attendeesNeeded: json['attendeesNeeded'] ?? 0,
-      registrations: json['registrations'] ?? 0,
-      level: json['level'] ?? '',
-      chapter: Chapter.fromString(json['chapter'] ?? 'cs'),
-      speakerFullName: json['speakerFullName'] ?? '',
-      aboutSpeaker: json['aboutSpeaker'] ?? '',
-      prerequisites: json['prerequisites'] ?? '',
-      speakerLinkedIn: json['speakerLinkedIn'] ?? '',
-      isFeatured: json['isFeatured'] ?? false,
-      isFavorite: json['isFavorite'] ?? false,
-      isRegistered: json['isRegistered'] ?? false,
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString() ?? '',
+      date: _parseDateTime(json['date']),
+      startTime: _parseDateTime(json['startTime']),
+      endTime: _parseDateTime(json['endTime']),
+      category: json['category']?.toString() ?? '',
+      attendeesNeeded: _parseInt(json['attendeesNeeded']),
+      registrations: _parseInt(json['registrations']),
+      level: json['level']?.toString() ?? '',
+      chapter: _parseChapter(json['chapter']),
+      speakerFullName: json['speakerFullName']?.toString() ?? '',
+      aboutSpeaker: json['aboutSpeaker']?.toString() ?? '',
+      prerequisites: json['prerequisites']?.toString() ?? '',
+      speakerLinkedIn:
+          (json['speakerLinkedIn'] ?? json['speakerLinkedin'])?.toString() ??
+          '',
+      isFeatured: json['isFeatured'] == true,
+      isFavorite: json['isFavorite'] == true,
+      isRegistered: json['isRegistered'] == true,
     );
+  }
+
+  /// Parse chapter from API JSON value, logging a warning if it's null/missing.
+  static Chapter _parseChapter(dynamic value) {
+    final chapter = Chapter.tryFromString(value?.toString());
+    if (chapter == null) {
+      print(
+        '⚠️ Event has null/invalid chapter value: $value — defaulting to CS',
+      );
+      return Chapter.cs;
+    }
+    return chapter;
+  }
+
+  static DateTime _parseDateTime(dynamic value) {
+    if (value == null) {
+      return DateTime.now();
+    }
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    if (value is double) {
+      return DateTime.fromMillisecondsSinceEpoch(value.toInt());
+    }
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (_) {
+        return DateTime.now();
+      }
+    }
+    return DateTime.now();
+  }
+
+  static int _parseInt(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is double) {
+      return value.toInt();
+    }
+    if (value is String) {
+      return int.tryParse(value) ?? 0;
+    }
+    return 0;
   }
 
   Map<String, dynamic> toJson() {

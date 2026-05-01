@@ -23,15 +23,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       body: Column(
         children: [
           _buildHeader(),
-          Expanded(
-            child: _buildFavoritesList(),
-          ),
+          Expanded(child: _buildFavoritesList()),
         ],
       ),
     );
@@ -39,7 +37,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
   Widget _buildHeader() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -76,9 +74,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     return Consumer<FavoritesViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         if (viewModel.error != null) {
@@ -86,18 +82,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 Text(
                   'Error: ${viewModel.error}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.red,
-                  ),
+                  style: const TextStyle(fontSize: 16, color: Colors.red),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -111,7 +100,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
         if (!viewModel.hasFavorites) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          
+
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -152,12 +141,16 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             return EventCard(
               event: event,
               onFavoritePressed: () => viewModel.removeFromFavorites(event.id),
-              onCardPressed: () {
-                Navigator.of(context).push(
+              onCardPressed: () async {
+                await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => EventDetailsScreen(eventId: event.id),
                   ),
                 );
+                // Refresh favorites when returning from details
+                if (context.mounted) {
+                  context.read<FavoritesViewModel>().loadFavoriteEvents();
+                }
               },
             );
           },

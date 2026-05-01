@@ -7,10 +7,7 @@ import '../event_ticket/event_ticket_screen.dart';
 class EventDetailsScreen extends StatefulWidget {
   final String eventId;
 
-  const EventDetailsScreen({
-    super.key,
-    required this.eventId,
-  });
+  const EventDetailsScreen({super.key, required this.eventId});
 
   @override
   State<EventDetailsScreen> createState() => _EventDetailsScreenState();
@@ -18,7 +15,7 @@ class EventDetailsScreen extends StatefulWidget {
 
 class _EventDetailsScreenState extends State<EventDetailsScreen> {
   final TextEditingController _commentController = TextEditingController();
-  
+
   @override
   void initState() {
     super.initState();
@@ -36,7 +33,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       appBar: AppBar(
@@ -63,9 +60,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       body: Consumer<EventDetailsViewModel>(
         builder: (context, viewModel, child) {
           if (viewModel.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (viewModel.error != null) {
@@ -73,18 +68,11 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: Colors.red,
-                  ),
+                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
                   const SizedBox(height: 16),
                   Text(
                     'Error: ${viewModel.error}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.red,
-                    ),
+                    style: const TextStyle(fontSize: 16, color: Colors.red),
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
@@ -97,9 +85,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           }
 
           if (viewModel.event == null) {
-            return const Center(
-              child: Text('Event not found'),
-            );
+            return const Center(child: Text('Event not found'));
           }
 
           return _buildEventDetails(viewModel.event!, isDark);
@@ -127,19 +113,19 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Event details
                 _buildEventDetailsList(event, isDark),
                 const SizedBox(height: 24),
-                
+
                 // About section
                 _buildAboutSection(event, isDark),
                 const SizedBox(height: 24),
-                
+
                 // Prerequisites section
                 _buildPrerequisitesSection(event, isDark),
                 const SizedBox(height: 24),
-                
+
                 // Speaker section
                 _buildSpeakerSection(event, isDark),
                 const SizedBox(height: 100), // Extra space for fixed button
@@ -166,12 +152,26 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
       ),
       child: Column(
         children: [
-          _buildDetailRow(Icons.person, 'Speaker', event.speakerFullName, isDark),
+          _buildDetailRow(
+            Icons.person,
+            'Speaker',
+            event.speakerFullName,
+            isDark,
+          ),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.calendar_today, 'Date & Time', 
-              '${_formatDate(event.date)} • ${_formatTime(event.startTime)} - ${_formatTime(event.endTime)}', isDark),
+          _buildDetailRow(
+            Icons.calendar_today,
+            'Date & Time',
+            '${_formatDate(event.date)} • ${_formatTime(event.startTime)} - ${_formatTime(event.endTime)}',
+            isDark,
+          ),
           const SizedBox(height: 12),
-          _buildDetailRow(Icons.group, 'Attendees', '${event.registrations}/${event.attendeesNeeded} Attendees', isDark),
+          _buildDetailRow(
+            Icons.group,
+            'Attendees',
+            '${event.registrations}/${event.attendeesNeeded} Attendees',
+            isDark,
+          ),
           const SizedBox(height: 12),
           _buildDetailRow(Icons.description, 'Level', event.level, isDark),
         ],
@@ -179,14 +179,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, bool isDark) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value,
+    bool isDark,
+  ) {
     return Row(
       children: [
-        Icon(
-          icon,
-          color: const Color(0xFF8B5CF6),
-          size: 20,
-        ),
+        Icon(icon, color: const Color(0xFF8B5CF6), size: 20),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
@@ -356,7 +357,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
-                                builder: (context) => EventTicketScreen(eventId: widget.eventId),
+                                builder: (context) =>
+                                    EventTicketScreen(eventId: widget.eventId),
                               ),
                             );
                           },
@@ -411,7 +413,8 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () => _showRegistrationBottomSheet(context, viewModel),
+                      onPressed: () =>
+                          _showRegistrationBottomSheet(context, viewModel),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF8B5CF6),
                         foregroundColor: Colors.white,
@@ -439,9 +442,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     );
   }
 
-  void _showRegistrationBottomSheet(BuildContext context, EventDetailsViewModel viewModel) {
+  void _showRegistrationBottomSheet(
+    BuildContext context,
+    EventDetailsViewModel viewModel,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -477,7 +483,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              
+
               // Title
               Text(
                 'Registration Confirmation',
@@ -488,7 +494,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Comment question
               Text(
                 'Do you have a comment? If yes leave it here',
@@ -498,7 +504,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              
+
               // Comment text field
               TextField(
                 controller: _commentController,
@@ -532,12 +538,10 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   filled: true,
                   fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
               const SizedBox(height: 24),
-              
+
               // Action buttons
               Row(
                 children: [
@@ -554,7 +558,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                           side: BorderSide(
-                            color: isDark ? Colors.grey[600]! : Colors.grey[300]!,
+                            color: isDark
+                                ? Colors.grey[600]!
+                                : Colors.grey[300]!,
                             width: 1,
                           ),
                         ),
@@ -571,56 +577,91 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        final navigator = Navigator.of(context);
-                        navigator.pop();
-                        
-                        final success = await viewModel.registerForEvent();
-                        _commentController.clear();
-                        
-                        if (success) {
-                          // Navigate to ticket screen
-                          navigator.push(
-                            MaterialPageRoute(
-                              builder: (context) => EventTicketScreen(eventId: widget.eventId),
+                    child: Consumer<EventDetailsViewModel>(
+                      builder: (context, viewModel, _) {
+                        final event = viewModel.event;
+                        final isEventFull =
+                            event != null &&
+                            event.registrations >= event.attendeesNeeded;
+                        final isAlreadyRegistered =
+                            event?.isRegistered ?? false;
+
+                        // Determine button state
+                        final isEnabled = !isAlreadyRegistered && !isEventFull;
+                        final buttonText = isAlreadyRegistered
+                            ? 'Registered'
+                            : (isEventFull ? 'Event Full' : 'Confirm');
+
+                        return ElevatedButton(
+                          onPressed: isEnabled
+                              ? () async {
+                                  final navigator = Navigator.of(context);
+                                  navigator.pop();
+
+                                  final success = await viewModel
+                                      .registerForEvent();
+                                  _commentController.clear();
+
+                                  if (success) {
+                                    // Navigate to ticket screen
+                                    navigator.push(
+                                      MaterialPageRoute(
+                                        builder: (context) => EventTicketScreen(
+                                          eventId: widget.eventId,
+                                        ),
+                                      ),
+                                    );
+                                  } else {
+                                    // Show error message
+                                    if (mounted) {
+                                      showDialog(
+                                        context: context,
+                                        builder: (context) => AlertDialog(
+                                          title: const Text(
+                                            'Registration Failed',
+                                          ),
+                                          content: Text(
+                                            viewModel.error ??
+                                                'Failed to register for event. Please try again.',
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () =>
+                                                  Navigator.of(context).pop(),
+                                              child: const Text('OK'),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }
+                                  }
+                                }
+                              : null,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isEnabled
+                                ? const Color(0xFF8B5CF6)
+                                : Colors.grey[400],
+                            foregroundColor: isEnabled
+                                ? Colors.white
+                                : Colors.grey[600],
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          );
-                        } else {
-                          // Show error message
-                          if (mounted) {
-                            showDialog(
-                              context: context,
-                              builder: (context) => AlertDialog(
-                                title: const Text('Registration Failed'),
-                                content: Text(viewModel.error ?? 'Failed to register for event. Please try again.'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(context).pop(),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }
-                        }
+                            elevation: isEnabled ? 0 : 0,
+                          ),
+                          child: Text(
+                            buttonText,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isEnabled
+                                  ? Colors.white
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                        );
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8B5CF6),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: const Text(
-                        'Confirm',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
                     ),
                   ),
                 ],
@@ -634,8 +675,18 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
 
   String _formatDate(DateTime date) {
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return '${months[date.month - 1]} ${date.day}, ${date.year}';
   }

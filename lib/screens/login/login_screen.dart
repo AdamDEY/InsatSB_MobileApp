@@ -13,7 +13,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: SafeArea(
@@ -23,19 +23,19 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 60),
-              
+
               // Logo and Title
               _buildHeader(isDark),
               const SizedBox(height: 60),
-              
+
               // Login Form
               _buildLoginForm(isDark),
               const SizedBox(height: 40),
-              
+
               // Login Button
               _buildLoginButton(isDark),
               const SizedBox(height: 24),
-              
+
               // Demo Credentials
               _buildDemoCredentials(isDark),
             ],
@@ -44,7 +44,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-  
+
   Widget _buildHeader(bool isDark) {
     return Column(
       children: [
@@ -56,11 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
             color: const Color(0xFF4A90E2),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(
-            Icons.school,
-            color: Colors.white,
-            size: 40,
-          ),
+          child: const Icon(Icons.school, color: Colors.white, size: 40),
         ),
         const SizedBox(height: 24),
         Text(
@@ -82,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ],
     );
   }
-  
+
   Widget _buildLoginForm(bool isDark) {
     return Consumer<LoginViewModel>(
       builder: (context, viewModel, child) {
@@ -115,17 +111,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 errorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Colors.red,
-                    width: 2,
-                  ),
+                  borderSide: const BorderSide(color: Colors.red, width: 2),
                 ),
                 filled: true,
                 fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
               ),
             ),
             const SizedBox(height: 20),
-            
+
             // Password Field
             TextFormField(
               controller: viewModel.passwordController,
@@ -161,10 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 errorBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Colors.red,
-                    width: 2,
-                  ),
+                  borderSide: const BorderSide(color: Colors.red, width: 2),
                 ),
                 filled: true,
                 fillColor: isDark ? Colors.grey[800] : Colors.grey[50],
@@ -175,14 +165,16 @@ class _LoginScreenState extends State<LoginScreen> {
       },
     );
   }
-  
+
   Widget _buildLoginButton(bool isDark) {
     return Consumer<LoginViewModel>(
       builder: (context, viewModel, child) {
         return SizedBox(
           height: 56,
           child: ElevatedButton(
-            onPressed: viewModel.isLoading ? null : () => _handleLogin(context, viewModel),
+            onPressed: viewModel.isLoading
+                ? null
+                : () => _handleLogin(context, viewModel),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF4A90E2),
               foregroundColor: Colors.white,
@@ -202,17 +194,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   )
                 : const Text(
                     'Sign In',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
           ),
         );
       },
     );
   }
-  
+
   Widget _buildDemoCredentials(bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -249,24 +238,34 @@ class _LoginScreenState extends State<LoginScreen> {
               color: isDark ? Colors.grey[400] : Colors.grey[600],
             ),
           ),
+          const SizedBox(height: 8),
+          Text(
+            'Note: Demo account is view-only and cannot register for events.',
+            style: TextStyle(
+              fontSize: 12,
+              color: isDark ? Colors.orange[300] : Colors.orange[800],
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
   }
-  
+
   void _handleLogin(BuildContext context, LoginViewModel viewModel) async {
     try {
       final success = await viewModel.login();
-      
+
       // Check if the widget is still mounted before showing dialog
       if (!mounted) return;
-      
+
       if (!success) {
         // Show error dialog with more specific error message
-        final errorMessage = viewModel.emailError ?? 
-                           viewModel.passwordError ?? 
-                           'Invalid credentials. Please try again.';
-        
+        final errorMessage =
+            viewModel.emailError ??
+            viewModel.passwordError ??
+            'Invalid credentials. Please try again.';
+
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -285,7 +284,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       // Handle any unexpected errors
       if (!mounted) return;
-      
+
       showDialog(
         context: context,
         builder: (context) => AlertDialog(

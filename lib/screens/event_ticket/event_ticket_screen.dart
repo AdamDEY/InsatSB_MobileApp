@@ -3,14 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../repositories/event_repository.dart';
 import '../../models/event.dart';
+import '../../services/firestore_auth_provider.dart';
 
 class EventTicketScreen extends StatefulWidget {
   final String eventId;
 
-  const EventTicketScreen({
-    super.key,
-    required this.eventId,
-  });
+  const EventTicketScreen({super.key, required this.eventId});
 
   @override
   State<EventTicketScreen> createState() => _EventTicketScreenState();
@@ -18,6 +16,7 @@ class EventTicketScreen extends StatefulWidget {
 
 class _EventTicketScreenState extends State<EventTicketScreen> {
   Event? _event;
+  String? _checkinToken;
   bool _isLoading = true;
 
   @override
@@ -30,8 +29,11 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
     try {
       final eventRepository = context.read<EventRepository>();
       final event = await eventRepository.getEventById(widget.eventId);
+      // Fetch the real check-in token
+      final token = await eventRepository.getCheckinToken(widget.eventId);
       setState(() {
         _event = event;
+        _checkinToken = token;
         _isLoading = false;
       });
     } catch (e) {
@@ -44,7 +46,7 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       body: SafeArea(
         child: Container(
@@ -96,18 +98,16 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
               Expanded(
                 child: _isLoading
                     ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                        ),
+                        child: CircularProgressIndicator(color: Colors.white),
                       )
                     : _event == null
-                        ? const Center(
-                            child: Text(
-                              'Event not found',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          )
-                        : _buildTicketCard(_event!, isDark),
+                    ? const Center(
+                        child: Text(
+                          'Event not found',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      )
+                    : _buildTicketCard(_event!, isDark),
               ),
             ],
           ),
@@ -117,9 +117,9 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
   }
 
   Widget _buildTicketCard(event, bool isDark) {
-    // Generate QR code data
-    final qrData = 'EVENT:${event.id}|USER:97235526|DATE:${event.date.millisecondsSinceEpoch}';
-    
+    // Use the real signed check-in token for the QR code
+    final qrData = _checkinToken ?? 'NO_TOKEN';
+
     return Center(
       child: Container(
         margin: const EdgeInsets.fromLTRB(20, 8, 20, 20),
@@ -142,19 +142,19 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
               // Event details
               _buildEventDetails(event),
               const SizedBox(height: 24),
-              
+
               // Attendee information
               _buildAttendeeInfo(),
               const SizedBox(height: 24),
-              
+
               // Perforated line
               _buildPerforatedLine(),
               const SizedBox(height: 24),
-              
+
               // QR Code
               _buildQRCode(qrData),
               const SizedBox(height: 16),
-              
+
               // Instructions
               Text(
                 'Scan your QR code at the entry.',
@@ -186,18 +186,11 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(
-              Icons.location_on,
-              size: 16,
-              color: Colors.grey[600],
-            ),
+            Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
             const SizedBox(width: 4),
             Text(
               '${_formatDate(event.date)} ~ INSAT, Tunis, Tunisia',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -206,6 +199,10 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
   }
 
   Widget _buildAttendeeInfo() {
+    final authProvider = context.read<AuthProvider>();
+    final userName = authProvider.userFullName ?? 'Unknown';
+    final userIeeeId = authProvider.userId ?? 'N/A';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -229,9 +226,9 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Flen Ben Foulen',
-                    style: TextStyle(
+                  Text(
+                    userName,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
@@ -251,9 +248,9 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '97235526',
-                    style: TextStyle(
+                  Text(
+                    userIeeeId,
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
@@ -280,7 +277,7 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _formatDateShort(DateTime.now()),
+                    _event != null ? _formatDateShort(_event!.date) : '',
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -301,9 +298,9 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    '2:00 PM',
-                    style: TextStyle(
+                  Text(
+                    _event != null ? _formatTime(_event!.startTime) : '',
+                    style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
@@ -336,9 +333,7 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
               color: Colors.grey[300],
               borderRadius: BorderRadius.circular(0.5),
             ),
-            child: CustomPaint(
-              painter: DashedLinePainter(),
-            ),
+            child: CustomPaint(painter: DashedLinePainter()),
           ),
         ),
         Container(
@@ -359,10 +354,7 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1,
-        ),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
       ),
       child: QrImageView(
         data: data,
@@ -381,21 +373,48 @@ class _EventTicketScreenState extends State<EventTicketScreen> {
     );
   }
 
-
   String _formatDate(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day} ${date.year}';
   }
 
   String _formatDateShort(DateTime date) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day} ${date.year}';
+  }
+
+  String _formatTime(DateTime time) {
+    final hour = time.hour;
+    final minute = time.minute.toString().padLeft(2, '0');
+    final period = hour >= 12 ? 'PM' : 'AM';
+    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+    return '$displayHour:$minute $period';
   }
 }
 
@@ -413,11 +432,7 @@ class DashedLinePainter extends CustomPainter {
     double startX = 0;
 
     while (startX < size.width) {
-      canvas.drawLine(
-        Offset(startX, 0),
-        Offset(startX + dashWidth, 0),
-        paint,
-      );
+      canvas.drawLine(Offset(startX, 0), Offset(startX + dashWidth, 0), paint);
       startX += dashWidth + dashSpace;
     }
   }

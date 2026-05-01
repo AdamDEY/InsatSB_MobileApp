@@ -4,7 +4,7 @@ import '../../repositories/event_repository.dart';
 
 class FavoritesViewModel extends ChangeNotifier {
   final EventRepository _eventRepository;
-  
+
   FavoritesViewModel(this._eventRepository);
 
   List<Event> _favoriteEvents = [];
@@ -26,11 +26,9 @@ class FavoritesViewModel extends ChangeNotifier {
   Future<void> loadFavoriteEvents() async {
     _setLoading(true);
     _error = null;
-    
+
     try {
-      // Get all events and filter favorites
-      final allEvents = await _eventRepository.getEvents();
-      _favoriteEvents = allEvents.where((event) => event.isFavorite).toList();
+      _favoriteEvents = await _eventRepository.getFavoriteEvents();
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -42,7 +40,7 @@ class FavoritesViewModel extends ChangeNotifier {
   Future<void> removeFromFavorites(String eventId) async {
     try {
       await _eventRepository.toggleFavorite(eventId);
-      
+
       // Update local state
       _favoriteEvents.removeWhere((event) => event.id == eventId);
       notifyListeners();

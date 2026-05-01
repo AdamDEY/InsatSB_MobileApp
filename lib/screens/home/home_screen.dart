@@ -23,16 +23,14 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.grey[50],
       body: Column(
         children: [
           _buildHeader(),
           _buildCategoryFilters(),
-          Expanded(
-            child: _buildEventsList(),
-          ),
+          Expanded(child: _buildEventsList()),
         ],
       ),
     );
@@ -40,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -87,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer<HomeViewModel>(
       builder: (context, viewModel, child) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
-        
+
         return Container(
           height: 40,
           margin: const EdgeInsets.symmetric(vertical: 8),
@@ -98,28 +96,33 @@ class _HomeScreenState extends State<HomeScreen> {
             itemBuilder: (context, index) {
               final category = viewModel.categories[index];
               final isSelected = category == viewModel.selectedCategory;
-              
+
               return Container(
                 margin: const EdgeInsets.only(right: 12),
                 child: GestureDetector(
                   onTap: () => viewModel.selectCategory(category),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected ? _getChapterColor(category) : Colors.transparent,
+                      color: isSelected
+                          ? _getChapterColor(category)
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isSelected 
-                          ? _getChapterColor(category)
-                          : (isDark ? Colors.grey[600]! : Colors.grey[300]!),
+                        color: isSelected
+                            ? _getChapterColor(category)
+                            : (isDark ? Colors.grey[600]! : Colors.grey[300]!),
                       ),
                     ),
                     child: Text(
                       category,
                       style: TextStyle(
-                        color: isSelected 
-                          ? Colors.white 
-                          : (isDark ? Colors.white : Colors.black),
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? Colors.white : Colors.black),
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -138,9 +141,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Consumer<HomeViewModel>(
       builder: (context, viewModel, child) {
         if (viewModel.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
 
         if (viewModel.error != null) {
@@ -148,18 +149,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.error_outline, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
                 Text(
                   'Error: ${viewModel.error}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    color: Colors.red,
-                  ),
+                  style: const TextStyle(fontSize: 16, color: Colors.red),
                 ),
                 const SizedBox(height: 16),
                 ElevatedButton(
@@ -173,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
         if (viewModel.events.isEmpty) {
           final isDark = Theme.of(context).brightness == Brightness.dark;
-          
+
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -211,12 +205,16 @@ class _HomeScreenState extends State<HomeScreen> {
             return EventCard(
               event: event,
               onFavoritePressed: () => viewModel.toggleFavorite(event.id),
-              onCardPressed: () {
-                Navigator.of(context).push(
+              onCardPressed: () async {
+                await Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) => EventDetailsScreen(eventId: event.id),
                   ),
                 );
+                // Refresh events when returning from details (e.g. after un/register)
+                if (context.mounted) {
+                  context.read<HomeViewModel>().loadEvents();
+                }
               },
             );
           },
@@ -239,6 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return const Color(0xFFFCD34D); // Yellow
       case 'WIE':
         return const Color(0xFF8B5CF6); // Purple
+      case 'EMBS':
+        return const Color(0xFF06B6D4); // Cyan
       case 'All':
         return const Color(0xFF8B5CF6); // Default purple for "All"
       default:

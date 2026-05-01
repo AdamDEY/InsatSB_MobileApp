@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'profile_view_model.dart';
+import 'registered_events_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,40 +23,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF5F5F5),
       body: Consumer<ProfileViewModel>(
         builder: (context, viewModel, child) {
           if (viewModel.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
-          
+
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 40),
-                
+
                 // Header
                 _buildHeader(viewModel, isDark),
                 const SizedBox(height: 32),
-                
+
                 // User Info Card
                 _buildUserInfoCard(viewModel, isDark),
                 const SizedBox(height: 24),
-                
+
                 // Registered Events Count Box
                 _buildEventsCountBox(viewModel, isDark),
                 const SizedBox(height: 24),
-                
+
                 // Spotify Playlist Button
                 _buildSpotifyButton(viewModel, isDark),
                 const SizedBox(height: 24),
-                
+
                 // Logout Button
                 _buildLogoutButton(viewModel, isDark),
                 const SizedBox(height: 40),
@@ -66,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   Widget _buildHeader(ProfileViewModel viewModel, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +91,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ],
     );
   }
-  
+
   Widget _buildUserInfoCard(ProfileViewModel viewModel, bool isDark) {
     return Container(
       width: double.infinity,
@@ -161,10 +162,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   Widget _buildEventsCountBox(ProfileViewModel viewModel, bool isDark) {
     return GestureDetector(
-      onTap: () => viewModel.navigateToRegisteredEvents(),
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => const RegisteredEventsScreen(),
+          ),
+        );
+        // Refresh count when returning
+        if (context.mounted) {
+          context.read<ProfileViewModel>().loadUserData();
+        }
+      },
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(20),
@@ -172,10 +183,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF4A90E2),
-              Color(0xFF357ABD),
-            ],
+            colors: [Color(0xFF4A90E2), Color(0xFF357ABD)],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
@@ -241,17 +249,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   Widget _buildSpotifyButton(ProfileViewModel viewModel, bool isDark) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: () => _openSpotifyPlaylist(viewModel.spotifyPlaylistUrl),
-        icon: const Icon(
-          Icons.music_note,
-          color: Colors.white,
-          size: 20,
-        ),
+        icon: const Icon(Icons.music_note, color: Colors.white, size: 20),
         label: const Text(
           'Open IEEE Playlist on Spotify',
           style: TextStyle(
@@ -272,17 +276,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   Widget _buildLogoutButton(ProfileViewModel viewModel, bool isDark) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: () => _showLogoutDialog(viewModel),
-        icon: const Icon(
-          Icons.logout,
-          color: Colors.white,
-          size: 20,
-        ),
+        icon: const Icon(Icons.logout, color: Colors.white, size: 20),
         label: const Text(
           'Logout',
           style: TextStyle(
@@ -303,7 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   Future<void> _openSpotifyPlaylist(String url) async {
     try {
       final uri = Uri.parse(url);
@@ -316,7 +316,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _showErrorSnackBar('Error opening Spotify playlist');
     }
   }
-  
+
   void _showLogoutDialog(ProfileViewModel viewModel) {
     showDialog(
       context: context,
@@ -341,22 +341,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
   }
-  
+
   void _showSuccessSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
     );
   }
-  
+
   void _showErrorSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
     );
   }
 }

@@ -21,9 +21,11 @@ class EventDetailsViewModel extends ChangeNotifier {
   Future<void> loadEvent(String eventId) async {
     _setLoading(true);
     _error = null;
-    
+
     try {
       _event = await _eventRepository.getEventById(eventId);
+      // Update registration status from the loaded event
+      _isRegistered = _event?.isRegistered ?? false;
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -34,10 +36,10 @@ class EventDetailsViewModel extends ChangeNotifier {
   // Toggle favorite status
   Future<void> toggleFavorite() async {
     if (_event == null) return;
-    
+
     try {
-      await _eventRepository.toggleFavorite(_event!.id);
-      _event = _event!.copyWith(isFavorite: !_event!.isFavorite);
+      final isFavorite = await _eventRepository.toggleFavorite(_event!.id);
+      _event = _event!.copyWith(isFavorite: isFavorite);
       notifyListeners();
     } catch (e) {
       _error = e.toString();
@@ -48,28 +50,29 @@ class EventDetailsViewModel extends ChangeNotifier {
   // Register for event
   Future<bool> registerForEvent() async {
     if (_event == null) return false;
-    
+
     _setLoading(true);
     _error = null;
-    
+
     try {
       print('EventDetailsViewModel: Registering for event: ${_event!.id}');
-      
-      // Register for the event in Firestore
-      final success = await _eventRepository.registerForEvent(_event!.id);
-      
-      if (success) {
+
+      // Register for the event
+      final result = await _eventRepository.registerForEvent(_event!.id);
+
+      if (result.success) {
         // Update local state
         _isRegistered = true;
-        
+
         // Reload the event to get updated registration count
         await loadEvent(_event!.id);
-        
+
         print('EventDetailsViewModel: Successfully registered for event');
         notifyListeners();
         return true;
       } else {
-        _error = 'Failed to register for event. Please try again.';
+        _error =
+            result.message ?? 'Failed to register for event. Please try again.';
         notifyListeners();
         return false;
       }
@@ -86,23 +89,23 @@ class EventDetailsViewModel extends ChangeNotifier {
   // Unregister from event
   Future<bool> unregisterFromEvent() async {
     if (_event == null) return false;
-    
+
     _setLoading(true);
     _error = null;
-    
+
     try {
       print('EventDetailsViewModel: Unregistering from event: ${_event!.id}');
-      
+
       // Unregister from the event in Firestore
       final success = await _eventRepository.unregisterFromEvent(_event!.id);
-      
+
       if (success) {
         // Update local state
         _isRegistered = false;
-        
+
         // Reload the event to get updated registration count
         await loadEvent(_event!.id);
-        
+
         print('EventDetailsViewModel: Successfully unregistered from event');
         notifyListeners();
         return true;
